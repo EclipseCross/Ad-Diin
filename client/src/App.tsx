@@ -12,8 +12,10 @@ import PrayerTimesPage from './pages/PrayerTimesPage';
 import MiladBookingPage from './pages/MiladBookingPage';
 import UserLoginPage from './pages/UserLoginPage';
 import UserRegistrationPage from './pages/UserRegistrationPage';
+import UserProfilePage from './pages/UserProfilePage';  // 👈 নতুন যোগ করা
 import AdminDashboard from './pages/AdminDashboard';
 import DiinAIPage from './pages/DiinAIPage';
+import EmailVerificationPage from './pages/EmailVerificationPage';
 
 export default function App() {
   return (
@@ -22,6 +24,7 @@ export default function App() {
         <Header />
         <main className="flex-1">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/activities" element={<ActivitiesPage />} />
@@ -31,11 +34,16 @@ export default function App() {
             <Route path="/zakat" element={<ZakatCalculatorPage />} />
             <Route path="/prayer-times" element={<PrayerTimesPage />} />
             <Route path="/milad" element={<MiladBookingPage />} />
-        
+            <Route path="/diin-ai" element={<DiinAIPage />} />
+            
+            {/* Auth Routes */}
             <Route path="/user-login" element={<UserLoginPage />} />
             <Route path="/user-registration" element={<UserRegistrationPage />} />
+            <Route path="/user-profile" element={<UserProfilePage />} />  {/* 👈 নতুন route */}
+            
+            {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/diin-ai" element={<DiinAIPage />} />
+            <Route path="/verify-email" element={<EmailVerificationPage />} />
           </Routes>
         </main>
         <Footer />
