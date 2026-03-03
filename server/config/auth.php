@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',
+        'guard' => 'api',           // 👈 Changed from 'web' to 'api'
         'passwords' => 'users',
     ],
 
@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'api' => [
+            'driver' => 'jwt',      // 👈 JWT driver for API
+            'provider' => 'users',
+        ],
     ],
 
     /*
@@ -62,7 +67,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => App\Models\User::class,  // 👈 Your User model
         ],
 
         // 'users' => [
@@ -89,7 +94,7 @@ return [
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => 'password_resets',
+            'table' => 'password_reset_tokens', // 👈 Laravel 9+ uses this
             'expire' => 60,
             'throttle' => 60,
         ],
