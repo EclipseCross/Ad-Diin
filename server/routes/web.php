@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Route;
 //     return ['Laravel' => app()->version()];
 // });
 
+Route::view('/ramadan-dashboard', 'ramadan-dashboard');
+
 Route::get('{any}', function () {
     return file_get_contents(public_path('index.html'));
 })->where('any', '.*');
