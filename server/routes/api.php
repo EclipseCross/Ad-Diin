@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PrayerTimeController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\MiladController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +33,13 @@ Route::prefix('v1')->group(function () {
     Route::get('/prayer-times/azan',   [PrayerTimeController::class, 'getAzanTimes']);
     Route::get('/prayer-times/nafl',   [PrayerTimeController::class, 'getNaflPrayers']);
     Route::get('/prayer-times/{id}',   [PrayerTimeController::class, 'show']);
+    
+    // Milad Public Routes
+    Route::get('/milads', [MiladController::class, 'index']);
+    
+    // Milad Public Routes
+    Route::get('/milads', [MiladController::class, 'index']);
+    Route::get('/milads/create-form', [MiladController::class, 'create']);
 });
 
 // ── Protected Routes (Require Token) ──────────────────────
@@ -47,7 +55,19 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
     // User Profile Routes
     Route::prefix('user')->group(function () {
         Route::put('/update', [AuthController::class, 'update']);
-        Route::post('/change-password', [AuthController::class, 'changePassword']); // 👈 New route
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
+        
+        // User Milad Requests
+        Route::get('/milads', [MiladController::class, 'userRequests']);
+    });
+    
+    // Milad Protected Routes
+    Route::prefix('milads')->group(function () {
+        Route::post('/', [MiladController::class, 'store']);
+        Route::get('/{milad}', [MiladController::class, 'show']);
+        Route::get('/{milad}/edit', [MiladController::class, 'edit']);
+        Route::put('/{milad}', [MiladController::class, 'update']);
+        Route::delete('/{milad}', [MiladController::class, 'destroy']);
     });
     
     // Admin Routes (with role check)
@@ -58,6 +78,10 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
         Route::delete('/prayer-times/{id}',       [PrayerTimeController::class, 'destroy']);
         Route::patch('/prayer-times/{id}/toggle', [PrayerTimeController::class, 'toggleActive']);
         Route::post('/prayer-times/order',        [PrayerTimeController::class, 'updateOrder']);
+        
+        // Milad Management
+        Route::get('/milads', [MiladController::class, 'adminIndex']);
+        Route::patch('/milads/{milad}/status', [MiladController::class, 'updateStatus']);
         
         // User Management
         Route::get('/users', [AuthController::class, 'getAllUsers']);

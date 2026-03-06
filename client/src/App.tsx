@@ -10,9 +10,10 @@ import EventsPage from './pages/EventsPage';
 import ZakatCalculatorPage from './pages/ZakatCalculatorPage';
 import PrayerTimesPage from './pages/PrayerTimesPage';
 import MiladBookingPage from './pages/MiladBookingPage';
+import MyMiladRequestsPage from './pages/MyMiladRequestsPage';
 import UserLoginPage from './pages/UserLoginPage';
 import UserRegistrationPage from './pages/UserRegistrationPage';
-import UserProfilePage from './pages/UserProfilePage';  // 👈 নতুন যোগ করা
+import UserProfilePage from './pages/UserProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import DiinAIPage from './pages/DiinAIPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/zakat" element={<ZakatCalculatorPage />} />
             <Route path="/prayer-times" element={<PrayerTimesPage />} />
             <Route path="/milad" element={<MiladBookingPage />} />
+            <Route path="/my-milad-requests" element={<MyMiladRequestsPage />} />
             <Route path="/diin-ai" element={<DiinAIPage />} />
             
             {/* Auth Routes */}
