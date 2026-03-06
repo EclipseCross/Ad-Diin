@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Phone, User, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Phone, User, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 
 const API_URL = 'http://localhost:8000/api/v1';
 

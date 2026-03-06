@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Shield, Clock, RefreshCw } from 'lucide-react';
+import { Shield, Clock, RefreshCw } from 'lucide-react';
 
 export default function EmailVerificationPage() {
   const [email, setEmail] = useState('');
