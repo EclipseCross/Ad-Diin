@@ -173,7 +173,6 @@ class MiladController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|string|max:255',
                 'phone' => 'sometimes|string|max:20',
-                'location' => 'sometimes|string|max:255',
                 'description' => 'sometimes|string|min:10',
                 'milad_date' => 'sometimes|date|after:today',
             ]);
@@ -195,7 +194,7 @@ class MiladController extends Controller
             }
 
             $milad->update($request->only([
-                'name', 'phone', 'location', 'description', 'milad_date'
+                'name', 'phone', 'description', 'milad_date'
             ]));
 
             return response()->json([
@@ -245,6 +244,122 @@ class MiladController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting milad request: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all milad requests for the logged-in user.
+     */
+    public function userRequests(Request $request)
+    {
+        try {
+            $query = Milad::where('user_id', Auth::id());
+
+            // Filter by status if provided
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $perPage = $request->get('per_page', 10);
+            $milads = $query->latest()->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $milads,
+                'message' => 'Your milad requests retrieved successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving your milad requests: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Admin: Update milad request status (pending, approved, rejected, completed).
+     */
+    public function updateStatus(Request $request, Milad $milad)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:pending,approved,rejected,completed',
+                'remark' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $oldStatus = $milad->status;
+            $milad->status = $request->status;
+            
+            // Store remark if provided (optional)
+            if ($request->has('remark')) {
+                $milad->admin_remark = $request->remark;
+            }
+            
+            $milad->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Milad status updated from '{$oldStatus}' to '{$request->status}'",
+                'data' => $milad->load('user')
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating milad status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Admin: Get all milad requests (with pagination and filters).
+     */
+    public function adminIndex(Request $request)
+    {
+        try {
+            $query = Milad::with('user');
+
+            // Filter by status
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by user
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+
+            // Search by name or phone
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+                });
+            }
+
+            $perPage = $request->get('per_page', 15);
+            $milads = $query->latest()->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $milads,
+                'message' => 'All milad requests retrieved successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving milad requests: ' . $e->getMessage()
             ], 500);
         }
     }

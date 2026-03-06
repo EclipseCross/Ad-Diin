@@ -55,7 +55,10 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
     // User Profile Routes
     Route::prefix('user')->group(function () {
         Route::put('/update', [AuthController::class, 'update']);
-        Route::post('/change-password', [AuthController::class, 'changePassword']); // 👈 New route
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
+        
+        // User Milad Requests
+        Route::get('/milads', [MiladController::class, 'userRequests']);
     });
     
     // Milad Protected Routes
@@ -75,6 +78,10 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
         Route::delete('/prayer-times/{id}',       [PrayerTimeController::class, 'destroy']);
         Route::patch('/prayer-times/{id}/toggle', [PrayerTimeController::class, 'toggleActive']);
         Route::post('/prayer-times/order',        [PrayerTimeController::class, 'updateOrder']);
+        
+        // Milad Management
+        Route::get('/milads', [MiladController::class, 'adminIndex']);
+        Route::patch('/milads/{milad}/status', [MiladController::class, 'updateStatus']);
         
         // User Management
         Route::get('/users', [AuthController::class, 'getAllUsers']);

@@ -21,6 +21,7 @@ class Milad extends Model
         'description',
         'milad_date',
         'status',
+        'admin_remark',
     ];
 
     /**
