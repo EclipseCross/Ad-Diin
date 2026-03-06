@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, MoonStar, Sun } from 'lucide-react';
+import { Clock3, Download, MoonStar, Share2, Sun } from 'lucide-react';
 
 type ApiResponse = {
   code: number;
@@ -18,6 +18,46 @@ type ApiResponse = {
       };
     };
   };
+};
+
+type CalendarDay = {
+  timings?: {
+    Fajr?: string;
+    Dhuhr?: string;
+    Asr?: string;
+    Maghrib?: string;
+    Isha?: string;
+  };
+  date?: {
+    readable?: string;
+    gregorian?: {
+      day?: string;
+      month?: { en?: string; number?: number };
+      year?: string;
+    };
+    hijri?: {
+      day?: string;
+      month?: { en?: string; number?: number };
+      year?: string;
+    };
+  };
+};
+
+type CalendarResponse = {
+  code: number;
+  status: string;
+  data?: CalendarDay[];
+};
+
+type RamadanRow = {
+  ramadanDay: string;
+  dateText: string;
+  fajr: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
+  isToday: boolean;
 };
 
 function sanitizeTime(rawTime: string): string {
@@ -56,6 +96,9 @@ export default function EventsPage() {
   const [remainingMs, setRemainingMs] = useState(0);
   const [progressPct, setProgressPct] = useState(0);
   const [notice, setNotice] = useState('Countdown will start after loading timings.');
+  const [calendarRows, setCalendarRows] = useState<RamadanRow[]>([]);
+  const [calendarTitle, setCalendarTitle] = useState('Dhaka Ramadan Calendar');
+  const [calendarError, setCalendarError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -116,6 +159,86 @@ export default function EventsPage() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+
+    function buildRows(days: CalendarDay[]): RamadanRow[] {
+      const today = getDhakaNow();
+      const todayDay = today.getDate();
+      const todayMonth = today.getMonth() + 1;
+      const todayYear = today.getFullYear();
+
+      return days
+        .filter((d) => Number(d?.date?.hijri?.month?.number) === 9)
+        .map((d) => {
+          const gDay = Number(d?.date?.gregorian?.day || 0);
+          const gMonth = Number(d?.date?.gregorian?.month?.number || 0);
+          const gYear = Number(d?.date?.gregorian?.year || 0);
+          return {
+            ramadanDay: d?.date?.hijri?.day || '--',
+            dateText: d?.date?.readable || '--',
+            fajr: sanitizeTime(d?.timings?.Fajr || '--:--'),
+            dhuhr: sanitizeTime(d?.timings?.Dhuhr || '--:--'),
+            asr: sanitizeTime(d?.timings?.Asr || '--:--'),
+            maghrib: sanitizeTime(d?.timings?.Maghrib || '--:--'),
+            isha: sanitizeTime(d?.timings?.Isha || '--:--'),
+            isToday: gDay === todayDay && gMonth === todayMonth && gYear === todayYear,
+          };
+        });
+    }
+
+    async function loadCalendar() {
+      try {
+        setCalendarError('');
+        const now = getDhakaNow();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+
+        const nextMonth = month === 12 ? 1 : month + 1;
+        const nextYear = month === 12 ? year + 1 : year;
+
+        const [r1, r2] = await Promise.all([
+          fetch(
+            `https://api.aladhan.com/v1/calendarByCity?city=Dhaka&country=Bangladesh&method=1&month=${month}&year=${year}`,
+          ),
+          fetch(
+            `https://api.aladhan.com/v1/calendarByCity?city=Dhaka&country=Bangladesh&method=1&month=${nextMonth}&year=${nextYear}`,
+          ),
+        ]);
+
+        if (!r1.ok || !r2.ok) throw new Error('Failed to load Ramadan calendar.');
+
+        const p1: CalendarResponse = await r1.json();
+        const p2: CalendarResponse = await r2.json();
+
+        const allDays = [...(p1.data || []), ...(p2.data || [])];
+        const rows = buildRows(allDays);
+
+        if (!active) return;
+
+        if (!rows.length) {
+          setCalendarRows([]);
+          setCalendarError('No Ramadan days found for the loaded months.');
+          return;
+        }
+
+        const firstDate = rows[0]?.dateText || '';
+        const lastDate = rows[rows.length - 1]?.dateText || '';
+        setCalendarTitle(`Dhaka Ramadan Calendar (${firstDate} - ${lastDate})`);
+        setCalendarRows(rows);
+      } catch (e: any) {
+        if (!active) return;
+        setCalendarError(e?.message || 'Unable to load Ramadan calendar right now.');
+      }
+    }
+
+    loadCalendar();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!sehriDate || !iftarDate) return;
 
     const tick = () => {
@@ -158,6 +281,45 @@ export default function EventsPage() {
       s: toTwo(seconds),
     };
   }, [remainingMs]);
+
+  const handleDownload = () => {
+    if (!calendarRows.length) return;
+
+    const header = ['Ramadan Day', 'Date', 'Sehri', 'Dhuhr', 'Asr', 'Iftar', 'Isha'];
+    const lines = calendarRows.map((r) =>
+      [r.ramadanDay, r.dateText, r.fajr, r.dhuhr, r.asr, r.maghrib, r.isha].join(','),
+    );
+    const csv = [header.join(','), ...lines].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'dhaka-ramadan-calendar.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    const shareText = 'Dhaka Ramadan Calendar and Sehri/Iftar timings';
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Ramadan Timings', text: shareText, url: shareUrl });
+      } catch {
+        // Ignore user-cancelled share actions.
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Page link copied to clipboard.');
+    } catch {
+      alert('Unable to copy the link. Please copy from address bar.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50/40 py-8 px-4 md:px-8">
@@ -232,6 +394,72 @@ export default function EventsPage() {
           {error && (
             <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-3 text-red-700 text-center">
               {error}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-white shadow-[0_12px_30px_rgba(16,185,129,0.10)] p-5 md:p-7">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900">{calendarTitle}</h3>
+              <p className="text-sm text-slate-600 mt-1">Hanafi method: Sehri shown as Fajr time, Iftar shown as Maghrib.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white font-semibold hover:bg-emerald-700 transition"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
+              </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-slate-800 font-semibold hover:bg-slate-200 transition"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-xl border border-emerald-100">
+            <table className="min-w-full bg-white text-sm">
+              <thead className="bg-emerald-50 text-slate-700">
+                <tr>
+                  <th className="px-3 py-3 text-left font-bold">Day</th>
+                  <th className="px-3 py-3 text-left font-bold">Date</th>
+                  <th className="px-3 py-3 text-left font-bold">Sehri</th>
+                  <th className="px-3 py-3 text-left font-bold">Dhuhr</th>
+                  <th className="px-3 py-3 text-left font-bold">Asr</th>
+                  <th className="px-3 py-3 text-left font-bold">Iftar</th>
+                  <th className="px-3 py-3 text-left font-bold">Isha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calendarRows.map((row, idx) => (
+                  <tr
+                    key={`${row.ramadanDay}-${idx}`}
+                    className={row.isToday ? 'bg-emerald-100/50' : 'hover:bg-slate-50'}
+                  >
+                    <td className="px-3 py-3 border-t border-slate-100 font-extrabold text-emerald-700">{row.ramadanDay}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-700">{row.dateText}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-900 font-semibold">{row.fajr}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-700">{row.dhuhr}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-700">{row.asr}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-900 font-semibold">{row.maghrib}</td>
+                    <td className="px-3 py-3 border-t border-slate-100 text-slate-700">{row.isha}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {calendarError && (
+            <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-red-700 text-center">
+              {calendarError}
             </div>
           )}
         </div>
