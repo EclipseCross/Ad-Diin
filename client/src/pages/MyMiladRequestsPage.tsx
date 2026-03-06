@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Phone, User, FileText, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Calendar, Phone, FileText, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 const API_URL = 'http://localhost:8000/api/v1';
 
@@ -15,15 +15,6 @@ interface MiladRequest {
   user?: {
     name: string;
     email: string;
-  };
-}
-
-interface PaginatedResponse {
-  data: {
-    data: MiladRequest[];
-    current_page: number;
-    last_page: number;
-    total: number;
   };
 }
 
