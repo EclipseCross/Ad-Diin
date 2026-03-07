@@ -103,6 +103,108 @@ PREPARE stmt FROM @preparedStatement;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- ============================================
+-- Table 5: milads (for milad booking)
+-- ============================================
+CREATE TABLE IF NOT EXISTS milads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    description TEXT NOT NULL,
+    milad_date DATE NOT NULL,
+    status ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+    admin_remark TEXT NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_milads_user_id (user_id),
+    INDEX idx_milads_status (status)
+);
+
+
+-- ============================================
+-- Check if milads table exists
+-- ============================================
+USE addiin;
+
+-- Show current structure
+DESCRIBE milads;
+
+-- ============================================
+-- Add admin_remark column to milads table (if not exists)
+-- ============================================
+SET @dbname = DATABASE();
+SET @tablename = "milads";
+SET @columnname = "admin_remark";
+SET @preparedStatement = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA = @dbname 
+     AND TABLE_NAME = @tablename 
+     AND COLUMN_NAME = @columnname) > 0,
+    "SELECT 'admin_remark column already exists'",
+    CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", 
+           @columnname, " TEXT NULL AFTER status;")
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- ============================================
+-- Verify the column was added
+-- ============================================
+DESCRIBE milads;
+
+
+-- ============================================
+-- Table: islamic_events
+-- ============================================
+CREATE TABLE islamic_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_name VARCHAR(255) NOT NULL,
+    event_date DATE NOT NULL,
+    hijri_date VARCHAR(100) NOT NULL,
+    hijri_month VARCHAR(50) NOT NULL,
+    hijri_day INT NOT NULL,
+    event_type ENUM('special', 'religious', 'festival', 'historical') DEFAULT 'religious',
+    description TEXT NULL,
+    is_active BOOLEAN DEFAULT true,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- Values (Data)
+-- ============================================
+INSERT INTO islamic_events (event_name, event_date, hijri_date, hijri_month, hijri_day, event_type, description, display_order) VALUES
+('Shab e Meraj 2026', '2026-01-17', '27 Rajab 1447h', 'Rajab', 27, 'religious', 'Night of Ascension', 1),
+('Shab e Barat 2026', '2026-02-04', '15 Shaban 1447h', 'Shaban', 15, 'religious', 'Night of Forgiveness', 2),
+('Ramadan 2026', '2026-02-19', '1 Ramadan 1447h', 'Ramadan', 1, 'religious', 'First day of Ramadan', 3),
+('Laylat al Qadr 2026', '2026-03-17', '27 Ramadan 1447h', 'Ramadan', 27, 'special', 'Night of Power', 4),
+('Eid ul Fitr 2026', '2026-03-20', '1 Shawwal 1447h', 'Shawwal', 1, 'festival', 'Festival of Breaking Fast', 5),
+('Hajj 2026', '2026-05-24', '7 Dhul Hijjah 1447h', 'Dhul Hijjah', 7, 'religious', 'Day of Arafah', 6),
+('Eid al Adha 2026', '2026-05-27', '10 Dhul Hijjah 1447h', 'Dhul Hijjah', 10, 'festival', 'Festival of Sacrifice', 7),
+('Muharram 2026', '2026-06-16', '1 Muharram 1448h', 'Muharram', 1, 'religious', 'Islamic New Year', 8),
+('Ashura 2026', '2026-06-25', '10 Muharram 1448h', 'Muharram', 10, 'historical', 'Day of Ashura', 9),
+('12 Rabi ul Awal 2026', '2026-08-25', '12 Rabi ul Awal 1448h', 'Rabi ul Awal', 12, 'festival', 'Birthday of Prophet Muhammad (PBUH)', 10);
+
+
+
+
+
+
+
+
+-- Show all tables
+SHOW TABLES;
+
+-- Describe milads table
+DESCRIBE milads;
+
+
+
+
 -- Show all tables
 SHOW TABLES;
 
@@ -112,14 +214,17 @@ DESCRIBE verifications;
 -- Show updated users table
 DESCRIBE users;
 
+
+
+
 -- Show all data
 SELECT * FROM users;
 SELECT * FROM verifications;
-delete from users where id =5;
+SELECT * FROM password_reset_tokens;
+SELECT * from milads;
+delete from users where id =3;
 
 delete from verifications where id =5;
-
-
 
 
 
@@ -128,3 +233,5 @@ SHOW TABLES;
 
 -- MySQL Workbench এ run করুন
 USE addiin;
+
+
