@@ -7,13 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Milad extends Model
 {
+    // 👈 Database First - specify table name
     protected $table = 'milads';
     protected $primaryKey = 'id';
     public $timestamps = true;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'user_id',
         'name',
@@ -24,9 +22,6 @@ class Milad extends Model
         'admin_remark',
     ];
 
-    /**
-     * The attributes that should be cast.
-     */
     protected $casts = [
         'milad_date' => 'date',
         'created_at' => 'datetime',

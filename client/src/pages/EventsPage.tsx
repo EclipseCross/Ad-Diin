@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Download, MoonStar, Share2, Sun } from 'lucide-react';
+import { Clock3, Download, MoonStar, Share2, Sun, Calendar, ChevronRight } from 'lucide-react';
 
 type ApiResponse = {
   code: number;
@@ -60,6 +60,17 @@ type RamadanRow = {
   isToday: boolean;
 };
 
+type IslamicEvent = {
+  id: number;
+  event_name: string;
+  event_date: string;
+  hijri_date: string;
+  days_remaining: number;
+  event_type: string;
+  description?: string;
+  is_active: boolean;
+};
+
 function sanitizeTime(rawTime: string): string {
   return rawTime.split(' ')[0]?.trim() || rawTime;
 }
@@ -99,6 +110,11 @@ export default function EventsPage() {
   const [calendarRows, setCalendarRows] = useState<RamadanRow[]>([]);
   const [calendarTitle, setCalendarTitle] = useState('Dhaka Ramadan Calendar');
   const [calendarError, setCalendarError] = useState('');
+  
+  // 👇 Islamic Events state
+  const [islamicEvents, setIslamicEvents] = useState<IslamicEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -238,6 +254,50 @@ export default function EventsPage() {
     };
   }, []);
 
+  // 👇 Fetch Islamic Events from your Laravel backend
+  useEffect(() => {
+    const fetchIslamicEvents = async () => {
+      try {
+        setEventsLoading(true);
+        setEventsError('');
+        
+        // Fetch from your Laravel backend
+        const response = await fetch('http://localhost:8000/api/v1/events/all');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Calculate days remaining for each event
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const eventsWithDays = data.data.map((event: any) => {
+            const eventDate = new Date(event.event_date);
+            eventDate.setHours(0, 0, 0, 0);
+            
+            const diffTime = eventDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return {
+              ...event,
+              days_remaining: diffDays
+            };
+          });
+          
+          setIslamicEvents(eventsWithDays || []);
+        } else {
+          setEventsError('Failed to load events from server');
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setEventsError('Network error. Please try again.');
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchIslamicEvents();
+  }, []);
+
   useEffect(() => {
     if (!sehriDate || !iftarDate) return;
 
@@ -321,9 +381,38 @@ export default function EventsPage() {
     }
   };
 
+  // Get upcoming events (days_remaining > 0)
+  const upcomingEvents = islamicEvents.filter(event => event.days_remaining > 0);
+  
+  // Get next event (closest upcoming)
+  const nextEvent = upcomingEvents.length > 0 
+    ? upcomingEvents.reduce((prev, curr) => 
+        prev.days_remaining < curr.days_remaining ? prev : curr
+      ) 
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50/40 py-8 px-4 md:px-8">
       <div className="mx-auto w-full max-w-6xl">
+        {/* Next Event Banner */}
+        {nextEvent && (
+          <div className="mb-6 bg-gradient-to-r from-emerald-600 to-emerald-800 text-white rounded-2xl p-4 shadow-lg">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6" />
+                <span className="font-semibold">Next Islamic Event:</span>
+                <span className="text-xl font-bold">{nextEvent.event_name}</span>
+              </div>
+              <div className="flex items-center gap-4 mt-2 md:mt-0">
+                <span className="text-emerald-100">{nextEvent.hijri_date}</span>
+                <span className="bg-white text-emerald-800 px-4 py-1 rounded-full font-bold">
+                  {nextEvent.days_remaining} days left
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="text-center mb-7">
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900">
             Today Sehri & Iftar Time Dhaka
@@ -394,6 +483,86 @@ export default function EventsPage() {
           {error && (
             <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-3 text-red-700 text-center">
               {error}
+            </div>
+          )}
+        </div>
+
+        {/* Islamic Events Section */}
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-white shadow-[0_12px_30px_rgba(16,185,129,0.10)] p-5 md:p-7">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-emerald-600" />
+              Islamic Events 2026
+            </h3>
+          </div>
+
+          {eventsLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+              <p className="text-slate-600 mt-2">Loading events from database...</p>
+            </div>
+          )}
+
+          {eventsError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-center">
+              {eventsError}
+            </div>
+          )}
+
+          {!eventsLoading && !eventsError && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
+                <thead className="bg-emerald-50 text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold">Event</th>
+                    <th className="px-4 py-3 text-left font-bold">Date</th>
+                    <th className="px-4 py-3 text-left font-bold">Hijri</th>
+                    <th className="px-4 py-3 text-left font-bold">Days Left</th>
+                    <th className="px-4 py-3 text-left font-bold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {islamicEvents.map((event) => (
+                    <tr key={event.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-3 font-semibold text-slate-900">{event.event_name}</td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {new Date(event.event_date).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{event.hijri_date}</td>
+                      <td className="px-4 py-3">
+                        {event.days_remaining > 0 ? (
+                          <span className="font-bold text-emerald-600">{event.days_remaining} days</span>
+                        ) : event.days_remaining === 0 ? (
+                          <span className="font-bold text-orange-600">Today</span>
+                        ) : (
+                          <span className="text-slate-400">Past</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {event.days_remaining > 0 && event.days_remaining <= 7 ? (
+                          <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-semibold">This Week</span>
+                        ) : event.days_remaining > 7 && event.days_remaining <= 30 ? (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">This Month</span>
+                        ) : event.days_remaining > 30 ? (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">Upcoming</span>
+                        ) : (
+                          <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">Past</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!eventsLoading && !eventsError && islamicEvents.length === 0 && (
+            <div className="text-center py-8 text-slate-500">
+              No events found in database.
             </div>
           )}
         </div>

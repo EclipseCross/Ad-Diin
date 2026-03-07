@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Phone, User, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 
 const API_URL = 'http://localhost:8000/api/v1';
@@ -27,11 +28,24 @@ export default function MiladBookingPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-  // Check if user is logged in
+  const navigate = useNavigate();
+
+  // Check if user is logged in and get token
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
+    const storedToken = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (storedToken && user) {
+      setToken(storedToken);
+      setIsLoggedIn(true);
+      console.log('Token found:', storedToken.substring(0, 20) + '...'); // Debug log
+    } else {
+      setIsLoggedIn(false);
+      setToken(null);
+      console.log('No token found');
+    }
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -56,7 +70,7 @@ export default function MiladBookingPage() {
     setErrorMessage('');
 
     // Check if user is logged in
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !token) {
       setErrorMessage('Please log in to submit a milad request');
       return;
     }
@@ -64,20 +78,24 @@ export default function MiladBookingPage() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      
+      console.log('Submitting with token:', token.substring(0, 20) + '...'); // Debug log
+      console.log('Form data:', formData); // Debug log
+
       const response = await fetch(`${API_URL}/milads`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
+      console.log('Response status:', response.status); // Debug log
+      console.log('Response data:', data); // Debug log
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setSuccessMessage('Milad request submitted successfully! Status: Pending review');
         setFormData({
           name: '',
@@ -86,19 +104,33 @@ export default function MiladBookingPage() {
           milad_date: '',
         });
         
-        // Clear success message after 5 seconds
+        // Clear success message after 5 seconds and redirect
         setTimeout(() => {
           setSuccessMessage('');
-        }, 5000);
+          navigate('/my-milad-requests');
+        }, 2000);
       } else {
-        if (data.errors) {
+        // Handle different error types
+        if (response.status === 401) {
+          // Token expired or invalid
+          setErrorMessage('Your session has expired. Please login again.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => {
+            navigate('/user-login');
+          }, 2000);
+        } else if (response.status === 422 && data.errors) {
+          // Validation errors
           setErrors(data.errors);
+          setErrorMessage(data.message || 'Please check the form for errors');
+        } else {
+          // Other errors
+          setErrorMessage(data.message || 'Failed to submit milad request');
         }
-        setErrorMessage(data.message || 'Failed to submit milad request');
       }
     } catch (error: any) {
-      setErrorMessage('Network error. Please try again.');
-      console.error('Error:', error);
+      console.error('Network error:', error);
+      setErrorMessage('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -107,25 +139,52 @@ export default function MiladBookingPage() {
   // Get today's date for min attribute
   const today = new Date().toISOString().split('T')[0];
 
+  // If not logged in, show login prompt
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
+            <p className="text-gray-600 mb-4">Please log in to submit a milad request</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => navigate('/user-login')}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Go to Login
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
       <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Milad Request</h1>
-          <p className="text-gray-600">Book a Milad celebration at our mosque</p>
-        </div>
-
-        {/* Login Alert */}
-        {!isLoggedIn && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-yellow-900">Login Required</h3>
-              <p className="text-yellow-800 text-sm">Please log in to submit a milad request</p>
-            </div>
+        {/* Header with View Requests Button */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Milad Request</h1>
+            <p className="text-gray-600">Book a Milad celebration at our mosque</p>
           </div>
-        )}
+          <button
+            onClick={() => navigate('/my-milad-requests')}
+            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            View My Requests
+          </button>
+        </div>
 
         {/* Success Message */}
         {successMessage && (
@@ -165,8 +224,9 @@ export default function MiladBookingPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="e.g., Celebration of birth of Prophet Muhammad (Peace be upon him)"
-                className={'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ' + (errors.name ? 'border-red-500' : 'border-gray-300')}
-                disabled={!isLoggedIn }
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
               {errors.name && (
@@ -185,9 +245,10 @@ export default function MiladBookingPage() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                placeholder="e.g., +880-1XXX-XXXXXX"
-                className={'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ' + (errors.phone ? 'border-red-500' : 'border-gray-300')}
-                disabled={!isLoggedIn}
+                placeholder="e.g., 017XXXXXXXX"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
               {errors.phone && (
@@ -207,8 +268,9 @@ export default function MiladBookingPage() {
                 value={formData.milad_date}
                 onChange={handleInputChange}
                 min={today}
-                className={'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ' + (errors.milad_date ? 'border-red-500' : 'border-gray-300')}
-                disabled={!isLoggedIn}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                  errors.milad_date ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
               {errors.milad_date && (
@@ -229,8 +291,9 @@ export default function MiladBookingPage() {
                 onChange={handleInputChange}
                 placeholder="Provide details about the milad celebration (guests expected, special requirements, etc.)"
                 rows={4}
-                className={'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ' + (errors.description ? 'border-red-500' : 'border-gray-300')}
-                disabled={!isLoggedIn}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                  errors.description ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
               {errors.description && (
@@ -242,8 +305,10 @@ export default function MiladBookingPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !isLoggedIn}
-              className={'w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2 ' + (loading ? 'opacity-75 cursor-not-allowed' : '')}
+              disabled={loading}
+              className={`w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2 ${
+                loading ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
             >
               {loading ? (
                 <>
@@ -276,4 +341,3 @@ export default function MiladBookingPage() {
     </div>
   );
 }
-  

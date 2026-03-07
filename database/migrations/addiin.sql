@@ -122,6 +122,8 @@ delete from verifications where id =5;
 
 
 
+
+
 SHOW TABLES;
 
 -- MySQL Workbench এ run করুন

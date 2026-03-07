@@ -6,6 +6,7 @@ use App\Http\Controllers\PrayerTimeController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\MiladController;
+use App\Http\Controllers\IslamicEventController; // 👈 Add this line
 
 /*
 |--------------------------------------------------------------------------
@@ -36,10 +37,15 @@ Route::prefix('v1')->group(function () {
     
     // Milad Public Routes
     Route::get('/milads', [MiladController::class, 'index']);
-    
-    // Milad Public Routes
-    Route::get('/milads', [MiladController::class, 'index']);
     Route::get('/milads/create-form', [MiladController::class, 'create']);
+    
+    // ===== NEW: Islamic Events Public Routes =====
+    Route::prefix('events')->group(function () {
+        Route::get('/upcoming', [IslamicEventController::class, 'upcoming']);
+        Route::get('/all', [IslamicEventController::class, 'all']);
+        Route::get('/today', [IslamicEventController::class, 'today']);
+        Route::get('/{id}', [IslamicEventController::class, 'show']);
+    });
 });
 
 // ── Protected Routes (Require Token) ──────────────────────
@@ -88,6 +94,13 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
         Route::get('/users/{id}', [AuthController::class, 'getUser']);
         Route::put('/users/{id}', [AuthController::class, 'updateUser']);
         Route::delete('/users/{id}', [AuthController::class, 'deleteUser']);
+        
+        // ===== NEW: Islamic Events Admin Routes =====
+        Route::prefix('events')->group(function () {
+            Route::post('/', [IslamicEventController::class, 'store']);
+            Route::put('/{id}', [IslamicEventController::class, 'update']);
+            Route::delete('/{id}', [IslamicEventController::class, 'destroy']);
+        });
     });
 });
 
@@ -113,7 +126,7 @@ Route::get('/test', function () {
             ],
             'user' => [
                 'update' => 'PUT /api/v1/user/update',
-                'change-password' => 'POST /api/v1/user/change-password', // 👈 Shows here
+                'change-password' => 'POST /api/v1/user/change-password',
             ],
             'ai' => [
                 'chat' => 'POST /api/v1/ai/chat',
@@ -124,6 +137,12 @@ Route::get('/test', function () {
                 'jamaat' => 'GET /api/v1/prayer-times/jamaat',
                 'azan' => 'GET /api/v1/prayer-times/azan',
                 'nafl' => 'GET /api/v1/prayer-times/nafl',
+            ],
+            'events' => [ // 👈 New section
+                'upcoming' => 'GET /api/v1/events/upcoming',
+                'all' => 'GET /api/v1/events/all',
+                'today' => 'GET /api/v1/events/today',
+                'details' => 'GET /api/v1/events/{id}',
             ]
         ]
     ]);
