@@ -1,0 +1,68 @@
+name: CI - Build Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v3
+
+    # ===== FRONTEND BUILD =====
+    - name: ⚛️ Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './client/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: ./client
+      run: npm ci || npm install
+    
+    - name: 🏗️ Build Frontend
+      working-directory: ./client
+      run: npm run build
+      
+    - name: ✅ Verify Build
+      working-directory: ./client
+      run: |
+        if [ -d "dist" ]; then
+          echo "✅ Build successful"
+        else
+          echo "❌ Build failed"
+          exit 1
+        fi
+
+    # ===== BACKEND SETUP =====
+    - name: 🐘 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, pdo_mysql
+    
+    - name: 📦 Install Backend Dependencies
+      working-directory: ./server
+      run: composer install --no-interaction
+    
+    - name: 📋 Create .env file
+      working-directory: ./server
+      run: cp .env.example .env || echo "APP_KEY=" > .env
+    
+    - name: 🔑 Generate Key
+      working-directory: ./server
+      run: php artisan key:generate
+
+    # ===== UPLOAD ARTIFACTS =====
+    - name: 📦 Upload Build
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build
+        path: ./client/dist
