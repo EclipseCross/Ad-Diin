@@ -33,7 +33,7 @@ export default function AboutUs() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50/30">
-      {/* Hero Section */}
+      {}
       <section className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-800 px-4 py-16 md:py-24">
         <div className="pointer-events-none absolute -right-20 top-10 h-96 w-96 rounded-full bg-emerald-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 bottom-0 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl" />
