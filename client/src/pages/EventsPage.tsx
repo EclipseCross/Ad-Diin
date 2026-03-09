@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Download, MoonStar, Share2, Sun, Calendar, ChevronRight } from 'lucide-react';
+import { Clock3, Download, MoonStar, Share2, Sun, Calendar } from 'lucide-react'; // 👈 ChevronRight removed
 
 type ApiResponse = {
   code: number;
@@ -381,15 +381,13 @@ export default function EventsPage() {
     }
   };
 
-  // Get upcoming events (days_remaining > 0)
-  const upcomingEvents = islamicEvents.filter(event => event.days_remaining > 0);
-  
   // Get next event (closest upcoming)
-  const nextEvent = upcomingEvents.length > 0 
-    ? upcomingEvents.reduce((prev, curr) => 
-        prev.days_remaining < curr.days_remaining ? prev : curr
-      ) 
-    : null;
+const nextEvent = islamicEvents
+.filter(event => event.days_remaining > 0)
+.reduce<IslamicEvent | null>((prev, curr) => {
+  if (prev === null) return curr;
+  return prev.days_remaining < curr.days_remaining ? prev : curr;
+}, null);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50/40 py-8 px-4 md:px-8">
