@@ -1,8 +1,12 @@
+@import "tailwindcss";
+
+/* Your custom styles */
 :root {
   font-family: 'Josefin Sans', serif;
   line-height: 1.5;
   font-weight: 400;
 }
+
 body {
   font-family: 'Josefin Sans', serif;
 }
@@ -21,6 +25,7 @@ main {
   flex: 1;
   padding: 1em;
 }
+
 footer {
   padding: 1em;
   text-align: center;
