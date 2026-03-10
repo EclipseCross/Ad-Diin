@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import AboutUs from './pages/AboutUs';
 import ActivitiesPage from './pages/ActivitiesPage';
 import DonatePage from './pages/DonatePage';
+import DonateSuccess from './pages/DonateSuccess';
 import ContactPage from './pages/ContactPage';
 import EventsPage from './pages/EventsPage';
 import ZakatCalculatorPage from './pages/ZakatCalculatorPage';
@@ -37,12 +38,18 @@ export default function App() {
             <Route path="/milad" element={<MiladBookingPage />} />
             <Route path="/my-milad-requests" element={<MyMiladRequestsPage />} />
             <Route path="/diin-ai" element={<DiinAIPage />} />
-            
+
+            {/* ✅ Donate Payment Callback Routes */}
+            <Route path="/donate/success" element={<DonateSuccess />} />
+            <Route path="/donate/fail"    element={<DonateSuccess />} />
+            <Route path="/donate/cancel"  element={<DonateSuccess />} />
+            <Route path="/donate/pending" element={<DonateSuccess />} />
+
             {/* Auth Routes */}
             <Route path="/user-login" element={<UserLoginPage />} />
             <Route path="/user-registration" element={<UserRegistrationPage />} />
-            <Route path="/user-profile" element={<UserProfilePage />} />  {/* 👈 নতুন route */}
-            
+            <Route path="/user-profile" element={<UserProfilePage />} />
+
             {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/verify-email" element={<EmailVerificationPage />} />
