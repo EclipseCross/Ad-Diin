@@ -54,12 +54,10 @@ export default function DonatePage() {
 
     try {
       const token = localStorage.getItem('token');
-
-      // ✅ user object থেকে phone নেওয়া হচ্ছে
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const userName  = user.name  || 'Anonymous';
       const userEmail = user.email || '';
-      const userPhone = user.phone || '01700000000'; // phone না থাকলে default
+      const userPhone = user.phone || '01700000000';
 
       const response = await fetch(`${API_URL}/api/v1/payment/initiate`, {
         method: 'POST',
@@ -69,11 +67,11 @@ export default function DonatePage() {
           'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({
-          category:     selectedCategory,
-          amount:       amount,
-          name:         userName,
-          email:        userEmail,
-          phone:        userPhone,
+          category: selectedCategory,
+          amount: amount,
+          name: userName,
+          email: userEmail,
+          phone: userPhone,
           is_anonymous: false
         })
       });
@@ -111,7 +109,7 @@ export default function DonatePage() {
 
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">দান করুন</h1>
-          <p className="text-xl text-gray-600">আপনার দান হোক লক্ষ্যবস্তু, পরিবর্তনের হাতিয়ার</p>
+          <p className="text-xl text-gray-600">SSLCommerz - নিরাপদ অনলাইন পেমেন্ট</p>
         </div>
 
         {error && (
@@ -183,6 +181,13 @@ export default function DonatePage() {
               <p className="text-xs text-gray-500 mt-1">ন্যূনতম: ৳{selectedCat.minAmount}</p>
             </div>
 
+            {/* SSLCommerz Info */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 text-center">
+                🔒 পেমেন্ট সম্পন্ন হবে SSLCommerz-এর নিরাপদ গেটওয়ের মাধ্যমে
+              </p>
+            </div>
+
             <button
               onClick={handleDonate}
               disabled={loading || amount < (selectedCat.minAmount || 0)}
@@ -193,7 +198,7 @@ export default function DonatePage() {
               {loading ? (
                 <><Loader2 className="w-5 h-5 animate-spin" /> প্রক্রিয়াকরণ...</>
               ) : (
-                `দান করুন ৳${amount}`
+                `SSLCommerz - দান করুন ৳${amount}`
               )}
             </button>
 
