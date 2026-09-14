@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+
 interface JamaatPrayer {
     id: number;
     name: string;
@@ -14,7 +17,8 @@ export function PrayerTimes() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://127.0.0.1:8000/api/v1/prayer-times')
+        // ✅ এখানে API_URL ব্যবহার করুন
+        fetch(`${API_URL}/api/v1/prayer-times`)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -50,7 +54,10 @@ export function PrayerTimes() {
                 }
                 setLoading(false);
             })
-            .catch(() => setLoading(false));
+            .catch((error) => {
+                console.error('Error fetching prayer times:', error);
+                setLoading(false);
+            });
     }, []);
 
     if (loading) return <div className="text-center py-8">Loading...</div>;

@@ -5,7 +5,7 @@ import {
   LogOut, Menu, X, Phone, Info,
   UserCheck, UserX, MessageSquare, MessageCircle,
   CheckCircle, XCircle, Loader2, BookOpen,
-  Moon, Sun, Trash2, Edit, Save, TrendingUp
+  Moon, Sun, Trash2, Edit, Save, TrendingUp, Mail, Image
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
@@ -79,7 +79,6 @@ export default function AdminPanel() {
   const [eventError, setEventError]                 = useState('');
   const [deleteEventConfirm, setDeleteEventConfirm] = useState<string | null>(null);
 
-  // ✅ Donation filter state
   const [donationFilter, setDonationFilter] = useState('all');
 
   const [users, setUsers]                 = useState<any[]>([]);
@@ -89,19 +88,39 @@ export default function AdminPanel() {
   const [miladRequests, setMiladRequests] = useState<any[]>([]);
 
   // ── Messaging States ──
-  const [conversations, setConversations]     = useState<any[]>([]);
+  const [conversations, setConversations]               = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
   const [conversationMessages, setConversationMessages] = useState<any[]>([]);
-  const [messageInput, setMessageInput]       = useState('');
-  const [messageSending, setMessageSending]   = useState(false);
+  const [messageInput, setMessageInput]                 = useState('');
+  const [messageSending, setMessageSending]             = useState(false);
 
-  // ✅ Donation stats
   const [donationStats, setDonationStats] = useState<{
     total_completed_amount: number;
     total_count: number;
     pending_count: number;
     by_category: Record<string, { total_amount: number; count: number }>;
   } | null>(null);
+
+  // ── Contact States ──
+  const [contacts, setContacts]                         = useState<any[]>([]);
+  const [selectedContact, setSelectedContact]           = useState<any | null>(null);
+  const [contactReply, setContactReply]                 = useState('');
+  const [contactReplying, setContactReplying]           = useState(false);
+  const [contactDeleteConfirm, setContactDeleteConfirm] = useState<string | null>(null);
+  const [contactFilter, setContactFilter]               = useState('all');
+
+  // ── Activities States ──
+  const [activities, setActivities]                     = useState<any[]>([]);
+  const [activityModal, setActivityModal]               = useState<'create' | 'edit' | null>(null);
+  const [editingActivity, setEditingActivity]           = useState<any | null>(null);
+  const [activityForm, setActivityForm]                 = useState({
+    title: '', description: '', category: '', is_active: true, display_order: ''
+  });
+  const [activityImageFile, setActivityImageFile]       = useState<File | null>(null);
+  const [activityImagePreview, setActivityImagePreview] = useState<string>('');
+  const [activitySaving, setActivitySaving]             = useState(false);
+  const [activityError, setActivityError]               = useState('');
+  const [deleteActivityConfirm, setDeleteActivityConfirm] = useState<string | null>(null);
 
   const adminUser = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -158,6 +177,14 @@ export default function AdminPanel() {
         const r = await fetch(`${API_URL}/api/v1/messages`, { headers: authHeaders() });
         const d = await r.json();
         setConversations(toArray(d.conversations) || []);
+      } else if (tab === 'contact') {
+        const r = await fetch(`${API_URL}/api/v1/admin/contact`, { headers: authHeaders() });
+        const d = await r.json();
+        setContacts(toArray(d));
+      } else if (tab === 'activities') {
+        const r = await fetch(`${API_URL}/api/v1/admin/activities`, { headers: authHeaders() });
+        const d = await r.json();
+        setActivities(toArray(d.data));
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -297,9 +324,7 @@ export default function AdminPanel() {
     try {
       const r = await fetch(`${API_URL}/api/v1/messages/${conversationId}`, { headers: authHeaders() });
       const d = await r.json();
-      if (d.success) {
-        setConversationMessages(d.messages || []);
-      }
+      if (d.success) setConversationMessages(d.messages || []);
     } catch (err) { console.error('Load messages error:', err); }
   };
 
@@ -321,7 +346,7 @@ export default function AdminPanel() {
       if (d.success) {
         setConversationMessages([...conversationMessages, d.message]);
         setMessageInput('');
-        setSelectedConversation({...selectedConversation, updated_at: new Date().toISOString()});
+        setSelectedConversation({ ...selectedConversation, updated_at: new Date().toISOString() });
       }
     } catch (err) { console.error('Send message error:', err); }
     finally { setMessageSending(false); }
@@ -335,10 +360,158 @@ export default function AdminPanel() {
       });
       const d = await r.json();
       if (d.success) {
-        setSelectedConversation({...selectedConversation, status: 'closed'});
-        setConversations(prev => prev.map(c => c.id === selectedConversation.id ? {...c, status: 'closed'} : c));
+        setSelectedConversation({ ...selectedConversation, status: 'closed' });
+        setConversations(prev => prev.map(c => c.id === selectedConversation.id ? { ...c, status: 'closed' } : c));
       }
     } catch (err) { console.error('Close conversation error:', err); }
+  };
+
+  // ── Contact Handlers ──
+  const handleMarkRead = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/api/v1/admin/contact/${id}/read`, { method: 'PATCH', headers: authHeaders() });
+      setContacts(prev => prev.map(c => c.id == id ? { ...c, status: 'read' } : c));
+      if (selectedContact?.id == id) setSelectedContact((prev: any) => ({ ...prev, status: 'read' }));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleContactReply = async () => {
+    if (!contactReply.trim() || !selectedContact) return;
+    setContactReplying(true);
+    try {
+      const r = await fetch(`${API_URL}/api/v1/admin/contact/${selectedContact.id}/reply`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ reply_message: contactReply })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setContacts(prev => prev.map(c => c.id === selectedContact.id ? { ...c, status: 'replied' } : c));
+        setSelectedContact((prev: any) => ({ ...prev, status: 'replied' }));
+        setContactReply('');
+        alert('✓ Reply পাঠানো হয়েছে!');
+      } else {
+        alert(d.message || 'Reply পাঠাতে ব্যর্থ হয়েছে');
+      }
+    } catch { alert('Network error'); }
+    finally { setContactReplying(false); }
+  };
+
+  const handleDeleteContact = async (id: string) => {
+    try {
+      const r = await fetch(`${API_URL}/api/v1/admin/contact/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const d = await r.json();
+      if (d.success) {
+        setContacts(prev => prev.filter(c => c.id != id));
+        if (selectedContact?.id == id) setSelectedContact(null);
+        setContactDeleteConfirm(null);
+      } else {
+        alert(d.message || 'Delete failed');
+      }
+    } catch { alert('Network error'); }
+  };
+
+  // ── Activity Handlers ──
+  const handleActivityImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setActivityImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setActivityImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const openCreateActivity = () => {
+    setActivityForm({ title: '', description: '', category: '', is_active: true, display_order: '' });
+    setActivityImageFile(null);
+    setActivityImagePreview('');
+    setActivityError('');
+    setEditingActivity(null);
+    setActivityModal('create');
+  };
+
+  const openEditActivity = (activity: any) => {
+    setEditingActivity(activity);
+    setActivityForm({
+      title:         activity.title       || '',
+      description:   activity.description || '',
+      category:      activity.category    || '',
+      is_active:     !!activity.is_active,
+      display_order: activity.display_order ? String(activity.display_order) : '',
+    });
+    setActivityImageFile(null);
+    setActivityImagePreview(activity.image_url || '');
+    setActivityError('');
+    setActivityModal('edit');
+  };
+
+  const handleSaveActivity = async () => {
+    if (!activityForm.title || !activityForm.description) {
+      setActivityError('শিরোনাম ও বিবরণ আবশ্যক');
+      return;
+    }
+    setActivitySaving(true);
+    setActivityError('');
+    try {
+      const formData = new FormData();
+      formData.append('title',         activityForm.title);
+      formData.append('description',   activityForm.description);
+      formData.append('category',      activityForm.category);
+      formData.append('is_active',     activityForm.is_active ? '1' : '0');
+      formData.append('display_order', activityForm.display_order || '0');
+      if (activityImageFile) formData.append('image', activityImageFile);
+
+      const isEdit = activityModal === 'edit';
+      const url    = isEdit
+        ? `${API_URL}/api/v1/admin/activities/${editingActivity.id}`
+        : `${API_URL}/api/v1/admin/activities`;
+
+      const token = localStorage.getItem('token');
+     
+      const r = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: formData,
+      });
+       
+      const d = await r.json();
+      if (d.success) {
+        if (isEdit) setActivities(prev => prev.map(a => a.id === editingActivity.id ? { ...a, ...d.data } : a));
+        else        setActivities(prev => [...prev, d.data]);
+        setActivityModal(null);
+      } else {
+        if (d.errors) {
+          const fe = Object.values(d.errors)[0];
+          setActivityError(Array.isArray(fe) ? fe[0] as string : String(fe));
+        } else {
+          setActivityError(d.message || 'সংরক্ষণ ব্যর্থ হয়েছে');
+        }
+      }
+    } catch { setActivityError('Network error'); }
+    finally { setActivitySaving(false); }
+  };
+
+  const handleDeleteActivity = async (id: number) => {
+    try {
+      const r = await fetch(`${API_URL}/api/v1/admin/activities/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+  
+      const d = await r.json();
+  
+      if (d.success) {
+        setActivities(prev => prev.filter(a => a.id !== id)); // strict compare
+        setDeleteActivityConfirm(null);
+      } else {
+        alert(d.message || 'Delete failed');
+      }
+  
+    } catch {
+      alert('Network error');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -347,12 +520,12 @@ export default function AdminPanel() {
       case 'processing': case 'read':  return 'bg-blue-100 text-blue-800';
       case 'pending':   case 'unread': return 'bg-yellow-100 text-yellow-800';
       case 'failed':    case 'rejected': return 'bg-red-100 text-red-800';
+      case 'replied':   return 'bg-emerald-100 text-emerald-800';
       case 'inactive':  return 'bg-gray-100 text-gray-800';
       default:          return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // ✅ Filtered donations
   const filteredDonations = donations.filter(d => {
     if (donationFilter === 'all') return true;
     return d.payment_status === donationFilter || d.category === donationFilter;
@@ -376,10 +549,10 @@ export default function AdminPanel() {
     { id: 'donations',      label: 'Donations',      icon: HandHeart       },
     { id: 'messages',       label: 'Messages',       icon: MessageCircle   },
     { id: 'contact',        label: 'Contact',        icon: Phone           },
+    { id: 'activities',     label: 'Activities',     icon: Image           },
     { id: 'about',          label: 'About Us',       icon: Info            },
   ];
 
-  // ✅ Category stats for bar chart
   const categoryStatsArray = donationStats?.by_category
     ? Object.entries(donationStats.by_category).map(([cat, val]) => ({
         category: cat,
@@ -395,7 +568,7 @@ export default function AdminPanel() {
   return (
     <div className={`min-h-screen ${bg} flex`}>
 
-      {/* User Delete Confirm */}
+      {/* ── User Delete Confirm ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className={`${card} rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl`}>
@@ -409,7 +582,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Event Delete Confirm */}
+      {/* ── Event Delete Confirm ── */}
       {deleteEventConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className={`${card} rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl`}>
@@ -423,7 +596,54 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Event Modal */}
+      {/* ── Contact Delete Confirm ── */}
+      {contactDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className={`${card} rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl`}>
+            <h3 className={`text-lg font-bold mb-2 ${text}`}>Message মুছবেন?</h3>
+            <p className={`text-sm mb-6 ${sub}`}>এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setContactDeleteConfirm(null)} className={`px-4 py-2 border ${bdr} rounded-lg text-sm`}>বাতিল</button>
+              <button onClick={() => handleDeleteContact(contactDeleteConfirm)} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">হ্যাঁ, মুছুন</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Activity Delete Confirm ── */}
+     {/* ── Activity Delete Confirm ── */}
+{deleteActivityConfirm && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div className={`${card} rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl`}>
+      
+      <h3 className={`text-lg font-bold mb-2 ${text}`}>
+        Activity মুছবেন?
+      </h3>
+
+      <p className={`text-sm mb-6 ${sub}`}>
+        এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।
+      </p>
+
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={() => setDeleteActivityConfirm(null)}
+          className={`px-4 py-2 border ${bdr} rounded-lg text-sm`}
+        >
+          বাতিল
+        </button>
+
+        <button
+          onClick={() => handleDeleteActivity(Number(deleteActivityConfirm))}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+        >
+          হ্যাঁ, মুছুন
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* ── Event Modal ── */}
       {eventModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className={`${card} rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
@@ -492,7 +712,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Prayer Edit Modal */}
+      {/* ── Prayer Edit Modal ── */}
       {editingPrayer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className={`${card} rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl`}>
@@ -518,7 +738,133 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* ── Activity Modal ── */}
+      {activityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className={`${card} rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`text-lg font-bold ${text}`}>
+                {activityModal === 'create' ? 'নতুন Activity যোগ করুন' : 'Activity সম্পাদনা করুন'}
+              </h3>
+              <button onClick={() => setActivityModal(null)} className={sub}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              {/* Image Upload */}
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${sub}`}>ছবি (Cloudinary)</label>
+                <div className={`border-2 border-dashed ${bdr} rounded-lg p-4 text-center`}>
+                  {activityImagePreview ? (
+                    <div className="relative">
+                      <img src={activityImagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg mb-2" />
+                      <button
+                        onClick={() => { setActivityImageFile(null); setActivityImagePreview(''); }}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                      >✕</button>
+                    </div>
+                  ) : (
+                    <div className="py-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <Image className={`w-5 h-5 ${sub}`} />
+                      </div>
+                      <p className={`text-xs ${sub}`}>ছবি বেছে নিন</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleActivityImageChange}
+                    className="hidden"
+                    id="activity-image-input"
+                  />
+                  <label
+                    htmlFor="activity-image-input"
+                    className={`mt-2 inline-block cursor-pointer px-4 py-1.5 border ${bdr} rounded-lg text-xs ${text} hover:bg-gray-50 transition`}
+                  >
+                    {activityImagePreview ? 'ছবি পরিবর্তন করুন' : 'ছবি বেছে নিন'}
+                  </label>
+                </div>
+              </div>
+              {/* Title */}
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${sub}`}>শিরোনাম *</label>
+                <input
+                  type="text"
+                  value={activityForm.title}
+                  onChange={e => setActivityForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="যেমন: Quranic Study"
+                  className={inputCls}
+                />
+              </div>
+              {/* Description */}
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${sub}`}>বিবরণ *</label>
+                <textarea
+                  rows={4}
+                  value={activityForm.description}
+                  onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Activity এর বিস্তারিত বিবরণ..."
+                  className={`${inputCls} resize-none`}
+                />
+              </div>
+              {/* Category & Order */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-xs font-medium mb-1 ${sub}`}>ক্যাটাগরি</label>
+                  <select
+                    value={activityForm.category}
+                    onChange={e => setActivityForm(f => ({ ...f, category: e.target.value }))}
+                    className={inputCls}
+                  >
+                    <option value="">-- বেছে নিন --</option>
+                    <option value="education">শিক্ষা (Education)</option>
+                    <option value="charity">দাতব্য (Charity)</option>
+                    <option value="youth">যুব কার্যক্রম (Youth)</option>
+                    <option value="social">সামাজিক (Social)</option>
+                    <option value="religious">ধর্মীয় (Religious)</option>
+                    <option value="other">অন্যান্য</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium mb-1 ${sub}`}>ক্রম (Order)</label>
+                  <input
+                    type="number"
+                    value={activityForm.display_order}
+                    min="0"
+                    onChange={e => setActivityForm(f => ({ ...f, display_order: e.target.value }))}
+                    placeholder="0"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+              {/* Active toggle */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="activity-active"
+                  checked={activityForm.is_active}
+                  onChange={e => setActivityForm(f => ({ ...f, is_active: e.target.checked }))}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+                <label htmlFor="activity-active" className={`text-sm ${text}`}>সক্রিয় রাখুন</label>
+              </div>
+            </div>
+            {activityError && <p className="text-red-500 text-sm mt-3">{activityError}</p>}
+            <div className="flex gap-3 justify-end mt-5">
+              <button onClick={() => setActivityModal(null)} className={`px-4 py-2 border ${bdr} rounded-lg text-sm ${text}`}>বাতিল</button>
+              <button
+                onClick={handleSaveActivity}
+                disabled={activitySaving}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
+              >
+                {activitySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {activityModal === 'create' ? 'যোগ করুন' : 'আপডেট করুন'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sidebar ── */}
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col shadow-xl transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${card}`}>
         <div className={`flex items-center justify-between p-4 border-b ${bdr}`}>
           <div className="flex items-center gap-2">
@@ -546,7 +892,7 @@ export default function AdminPanel() {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         <header className={`sticky top-0 z-30 ${card} shadow-sm`}>
           <div className="flex items-center justify-between px-4 py-3">
@@ -554,7 +900,6 @@ export default function AdminPanel() {
               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition">
                 <Menu className={`w-5 h-5 ${sub}`} />
               </button>
-
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg hover:bg-gray-100 transition">
@@ -583,7 +928,6 @@ export default function AdminPanel() {
               {/* ── DASHBOARD ── */}
               {activeTab === 'dashboard' && (
                 <div className="space-y-6">
-                  {/* Top stats */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                       { label: 'মোট ব্যবহারকারী', value: users.length,     icon: Users,         color: 'bg-blue-100 text-blue-600'       },
@@ -599,7 +943,6 @@ export default function AdminPanel() {
                     ))}
                   </div>
 
-                  {/* ✅ Total completed amount */}
                   {donationStats && (
                     <div className={`${card} rounded-xl shadow-sm p-6`}>
                       <div className="flex items-center gap-3 mb-5">
@@ -623,8 +966,6 @@ export default function AdminPanel() {
                           <p className="text-sm text-yellow-600 mt-1">প্রক্রিয়াধীন</p>
                         </div>
                       </div>
-
-                      {/* ✅ Category-wise bar chart */}
                       {categoryStatsArray.length > 0 && (
                         <div>
                           <h4 className={`text-sm font-semibold mb-3 ${text}`}>ক্যাটাগরি অনুযায়ী দান</h4>
@@ -639,10 +980,7 @@ export default function AdminPanel() {
                                   </div>
                                 </div>
                                 <div className={`w-full h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                  <div
-                                    className={`h-2 rounded-full ${cat.color} transition-all duration-500`}
-                                    style={{ width: `${(cat.amount / maxAmount) * 100}%` }}
-                                  />
+                                  <div className={`h-2 rounded-full ${cat.color} transition-all duration-500`} style={{ width: `${(cat.amount / maxAmount) * 100}%` }} />
                                 </div>
                               </div>
                             ))}
@@ -652,7 +990,6 @@ export default function AdminPanel() {
                     </div>
                   )}
 
-                  {/* Recent donations */}
                   <div className={`${card} rounded-xl shadow-sm p-6`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className={`font-semibold ${text}`}>সাম্প্রতিক দান</h3>
@@ -680,7 +1017,6 @@ export default function AdminPanel() {
                     )}
                   </div>
 
-                  {/* Pending milad */}
                   <div className={`${card} rounded-xl shadow-sm p-6`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className={`font-semibold ${text}`}>Pending মিলাদ অনুরোধ</h3>
@@ -704,7 +1040,6 @@ export default function AdminPanel() {
                     )}
                   </div>
 
-                  {/* Upcoming events */}
                   <div className={`${card} rounded-xl shadow-sm p-6`}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className={`font-semibold ${text}`}>আসন্ন ইভেন্ট</h3>
@@ -885,7 +1220,6 @@ export default function AdminPanel() {
               {/* ── DONATIONS ── */}
               {activeTab === 'donations' && (
                 <div className="space-y-4">
-                  {/* ✅ Donation stats summary */}
                   {donationStats && (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className={`${card} rounded-xl p-4 shadow-sm`}>
@@ -902,14 +1236,10 @@ export default function AdminPanel() {
                       </div>
                     </div>
                   )}
-
                   <div className={`${card} rounded-xl shadow-sm p-6`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
                       <h3 className={`text-xl font-semibold ${text}`}>দানের তালিকা</h3>
-
-                      {/* ✅ Filter buttons */}
                       <div className="flex flex-wrap gap-2">
-                        {/* Status filter */}
                         {[
                           { key: 'all',       label: 'সব' },
                           { key: 'completed', label: '✓ সম্পন্ন' },
@@ -917,13 +1247,10 @@ export default function AdminPanel() {
                           { key: 'failed',    label: '✗ ব্যর্থ' },
                         ].map(f => (
                           <button key={f.key} onClick={() => setDonationFilter(f.key)}
-                            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-                              donationFilter === f.key ? 'bg-emerald-600 text-white' : `border ${bdr} ${sub} hover:bg-gray-100`
-                            }`}>
+                            className={`px-3 py-1 rounded-lg text-xs font-medium transition ${donationFilter === f.key ? 'bg-emerald-600 text-white' : `border ${bdr} ${sub} hover:bg-gray-100`}`}>
                             {f.label}
                           </button>
                         ))}
-                        {/* Category filter */}
                         <select
                           value={['all','completed','pending','failed'].includes(donationFilter) ? 'cat_all' : donationFilter}
                           onChange={e => setDonationFilter(e.target.value === 'cat_all' ? 'all' : e.target.value)}
@@ -935,7 +1262,6 @@ export default function AdminPanel() {
                         </select>
                       </div>
                     </div>
-
                     {filteredDonations.length === 0 ? <p className={`text-center py-8 ${sub}`}>কোনো দান নেই</p> : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -969,7 +1295,6 @@ export default function AdminPanel() {
                 <div className={`${card} rounded-xl shadow-sm p-6 w-full max-w-6xl`}>
                   <h3 className={`text-xl font-semibold mb-6 ${text}`}>User Messages</h3>
                   <div className="grid gap-6 lg:grid-cols-3 min-h-[500px]">
-                    {/* Conversations List */}
                     <div className={`${card} rounded-lg border ${bdr} overflow-hidden flex flex-col`}>
                       <div className="bg-emerald-600 text-white p-4 font-semibold">Conversations</div>
                       <div className="flex-1 overflow-y-auto">
@@ -977,15 +1302,8 @@ export default function AdminPanel() {
                           <div className="p-4 text-center text-sm text-gray-500">No conversations</div>
                         ) : (
                           conversations.map(conv => (
-                            <button
-                              key={conv.id}
-                              onClick={() => handleSelectConversation(conv)}
-                              className={`w-full p-4 border-b ${bdr} text-left transition ${
-                                selectedConversation?.id === conv.id
-                                  ? 'bg-emerald-50 border-l-4 border-l-emerald-600'
-                                  : 'hover:bg-gray-50'
-                              }`}
-                            >
+                            <button key={conv.id} onClick={() => handleSelectConversation(conv)}
+                              className={`w-full p-4 border-b ${bdr} text-left transition ${selectedConversation?.id === conv.id ? 'bg-emerald-50 border-l-4 border-l-emerald-600' : 'hover:bg-gray-50'}`}>
                               <p className={`font-semibold text-sm ${text}`}>{conv.user?.name || 'User'}</p>
                               <p className="text-xs text-gray-500 truncate">{conv.user?.email}</p>
                               <p className="text-xs text-gray-600 mt-1 truncate">{conv.lastMessage?.message || 'No messages'}</p>
@@ -994,83 +1312,44 @@ export default function AdminPanel() {
                         )}
                       </div>
                     </div>
-
-                    {/* Chat Window */}
                     <div className={`lg:col-span-2 ${card} rounded-lg border ${bdr} overflow-hidden flex flex-col`}>
                       {selectedConversation ? (
                         <>
-                          {/* Header */}
                           <div className="bg-emerald-600 text-white p-4 flex items-center justify-between font-semibold">
                             <div>
                               <p className="text-sm opacity-90">Conversation with</p>
                               <p>{selectedConversation.user?.name}</p>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              selectedConversation.status === 'active' 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${selectedConversation.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                               {selectedConversation.status}
                             </span>
                           </div>
-
-                          {/* Messages */}
-                          <div className={`flex-1 overflow-y-auto p-4 bg-gray-50/50 space-y-3`}>
+                          <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 space-y-3">
                             {conversationMessages.length === 0 ? (
-                              <div className="flex items-center justify-center h-full text-gray-400 text-center">
-                                <p>No messages yet. Start replying!</p>
-                              </div>
+                              <div className="flex items-center justify-center h-full text-gray-400 text-center"><p>No messages yet. Start replying!</p></div>
                             ) : (
                               conversationMessages.map(msg => (
-                                <div
-                                  key={msg.id}
-                                  className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                  <div
-                                    className={`max-w-xs px-4 py-2 rounded-lg ${
-                                      msg.sender_type === 'admin'
-                                        ? 'bg-emerald-600 text-white rounded-br-none'
-                                        : 'bg-gray-200 text-gray-900 rounded-bl-none'
-                                    }`}
-                                  >
+                                <div key={msg.id} className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                                  <div className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender_type === 'admin' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'}`}>
                                     <p className="text-xs opacity-70 mb-1">{msg.sender?.name}</p>
                                     <p className="text-sm">{msg.message}</p>
-                                    <p className="text-xs opacity-50 mt-1">
-                                      {new Date(msg.created_at).toLocaleTimeString()}
-                                    </p>
+                                    <p className="text-xs opacity-50 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</p>
                                   </div>
                                 </div>
                               ))
                             )}
                           </div>
-
-                          {/* Actions & Input */}
                           <div className={`border-t ${bdr} p-4 bg-white`}>
                             {selectedConversation.status === 'active' ? (
                               <div className="space-y-2">
                                 <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={messageInput}
-                                    onChange={(e) => setMessageInput(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                    placeholder="Type your reply..."
-                                    className={inputCls}
-                                  />
-                                  <button
-                                    onClick={handleSendMessage}
-                                    disabled={!messageInput.trim() || messageSending}
-                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-semibold"
-                                  >
-                                    Send
-                                  </button>
+                                  <input type="text" value={messageInput} onChange={e => setMessageInput(e.target.value)}
+                                    onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
+                                    placeholder="Type your reply..." className={inputCls} />
+                                  <button onClick={handleSendMessage} disabled={!messageInput.trim() || messageSending}
+                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-semibold">Send</button>
                                 </div>
-                                <button
-                                  onClick={handleCloseConversation}
-                                  className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
-                                >
-                                  Close Conversation
-                                </button>
+                                <button onClick={handleCloseConversation} className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold">Close Conversation</button>
                               </div>
                             ) : (
                               <p className="text-center text-sm text-red-600 font-semibold">This conversation is closed</p>
@@ -1078,9 +1357,7 @@ export default function AdminPanel() {
                           </div>
                         </>
                       ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-center">
-                          <p>Select a conversation to view messages</p>
-                        </div>
+                        <div className="flex items-center justify-center h-full text-gray-400 text-center"><p>Select a conversation to view messages</p></div>
                       )}
                     </div>
                   </div>
@@ -1089,9 +1366,162 @@ export default function AdminPanel() {
 
               {/* ── CONTACT ── */}
               {activeTab === 'contact' && (
-                <div className={`${card} rounded-xl shadow-sm p-6 max-w-2xl`}>
-                  <h3 className={`text-xl font-semibold mb-6 ${text}`}>Contact</h3>
-                  <p className={`${sub} text-sm`}>এই পেজটি এখনো তৈরি হয়নি।</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { label: 'মোট Message',       value: contacts.length,                                     color: text              },
+                      { label: 'অপঠিত',             value: contacts.filter(c => c.status === 'unread').length,  color: 'text-yellow-600' },
+                      { label: 'Reply দেওয়া হয়েছে', value: contacts.filter(c => c.status === 'replied').length, color: 'text-emerald-600' },
+                    ].map(s => (
+                      <div key={s.label} className={`${card} rounded-xl p-4 shadow-sm text-center`}>
+                        <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                        <p className={`text-xs ${sub} mt-1`}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`${card} rounded-xl shadow-sm overflow-hidden`}>
+                    <div className="grid lg:grid-cols-5 min-h-[560px]">
+                      <div className={`lg:col-span-2 border-r ${bdr} flex flex-col`}>
+                        <div className={`p-4 border-b ${bdr} flex items-center justify-between`}>
+                          <h3 className={`font-semibold ${text}`}>Contact Messages</h3>
+                          <select value={contactFilter} onChange={e => setContactFilter(e.target.value)}
+                            className={`text-xs border ${bdr} rounded-lg px-2 py-1 ${text} ${darkMode ? 'bg-gray-700' : 'bg-white'} focus:outline-none`}>
+                            <option value="all">সব</option>
+                            <option value="unread">অপঠিত</option>
+                            <option value="read">পঠিত</option>
+                            <option value="replied">Reply দেওয়া</option>
+                          </select>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                          {contacts.filter(c => contactFilter === 'all' || c.status === contactFilter).length === 0 ? (
+                            <div className={`p-8 text-center ${sub} text-sm`}>কোনো message নেই</div>
+                          ) : (
+                            contacts.filter(c => contactFilter === 'all' || c.status === contactFilter).map(c => (
+                              <button key={c.id} onClick={() => { setSelectedContact(c); if (c.status === 'unread') handleMarkRead(c.id); }}
+                                className={`w-full p-4 border-b ${bdr} text-left transition ${selectedContact?.id === c.id ? 'bg-emerald-50 border-l-4 border-l-emerald-600' : `hover:${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}`}>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`font-semibold text-sm truncate ${text}`}>{c.name}</p>
+                                    <p className={`text-xs truncate ${sub}`}>{c.email}</p>
+                                    <p className={`text-xs mt-1 truncate ${sub}`}>{c.message?.slice(0, 50)}...</p>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(c.status)}`}>
+                                      {c.status === 'unread' ? 'নতুন' : c.status === 'read' ? 'পঠিত' : 'Reply দেওয়া'}
+                                    </span>
+                                    <span className={`text-xs ${sub}`}>{c.created_at?.slice(0, 10)}</span>
+                                  </div>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <div className="lg:col-span-3 flex flex-col">
+                        {selectedContact ? (
+                          <>
+                            <div className={`p-4 border-b ${bdr} flex items-center justify-between`}>
+                              <div>
+                                <p className={`font-semibold ${text}`}>{selectedContact.name}</p>
+                                <p className={`text-xs ${sub}`}>{selectedContact.email}{selectedContact.company ? ` · ${selectedContact.company}` : ''}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedContact.status)}`}>
+                                  {selectedContact.status === 'unread' ? 'নতুন' : selectedContact.status === 'read' ? 'পঠিত' : 'Reply দেওয়া'}
+                                </span>
+                                <button onClick={() => setContactDeleteConfirm(selectedContact.id)} className="p-1.5 rounded hover:bg-red-50 transition">
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className={`flex-1 p-5 overflow-y-auto ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                              <div className={`${card} rounded-xl p-4 border ${bdr}`}>
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-emerald-700 font-bold text-sm">{selectedContact.name?.charAt(0)?.toUpperCase()}</span>
+                                  </div>
+                                  <div>
+                                    <p className={`text-sm font-semibold ${text}`}>{selectedContact.name}</p>
+                                    <p className={`text-xs ${sub}`}>{selectedContact.created_at?.slice(0, 16).replace('T', ' ')}</p>
+                                  </div>
+                                </div>
+                                <p className={`text-sm leading-relaxed ${text} whitespace-pre-wrap`}>{selectedContact.message}</p>
+                              </div>
+                            </div>
+                            <div className={`p-4 border-t ${bdr} ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                              <p className={`text-xs font-medium mb-2 ${sub}`}>
+                                Reply to: <span className="font-semibold text-emerald-600">{selectedContact.email}</span>
+                                {selectedContact.status === 'replied' && <span className="ml-2 text-emerald-600">· ইতিমধ্যে reply দেওয়া হয়েছে</span>}
+                              </p>
+                              <textarea rows={4} value={contactReply} onChange={e => setContactReply(e.target.value)}
+                                placeholder="এখানে reply লিখুন... (email এ পাঠানো হবে)"
+                                className={`w-full border ${bdr} rounded-lg px-3 py-2 text-sm ${text} ${darkMode ? 'bg-gray-700' : 'bg-white'} focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none mb-3`} />
+                              <button onClick={handleContactReply} disabled={!contactReply.trim() || contactReplying}
+                                className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition">
+                                {contactReplying ? <><Loader2 className="w-4 h-4 animate-spin" /> পাঠানো হচ্ছে...</> : <><Mail className="w-4 h-4" /> Email এ Reply পাঠান</>}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className={`flex-1 flex items-center justify-center ${sub} text-sm`}>বাম পাশ থেকে একটি message select করুন</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ACTIVITIES ── */}
+              {activeTab === 'activities' && (
+                <div className={`${card} rounded-xl shadow-sm p-6`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className={`text-xl font-semibold ${text}`}>Activities ব্যবস্থাপনা</h3>
+                    <button onClick={openCreateActivity}
+                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition">
+                      <span className="text-lg leading-none font-bold">+</span> নতুন Activity
+                    </button>
+                  </div>
+                  {activities.length === 0 ? (
+                    <p className={`text-center py-8 ${sub}`}>কোনো activity নেই</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {activities.map((a: any) => (
+                        <div key={a.id} className={`border ${bdr} rounded-xl overflow-hidden`}>
+                          {a.image_url ? (
+                            <img src={a.image_url} alt={a.title} className="w-full h-44 object-cover" />
+                          ) : (
+                            <div className={`w-full h-44 flex items-center justify-center ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                              <Image className={`w-8 h-8 ${sub}`} />
+                            </div>
+                          )}
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h4 className={`font-semibold ${text} leading-tight`}>{a.title}</h4>
+                              <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${a.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                                {a.is_active ? 'active' : 'inactive'}
+                              </span>
+                            </div>
+                            {a.category && (
+                              <span className="inline-block mb-2 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                {a.category}
+                              </span>
+                            )}
+                            <p className={`text-sm ${sub} line-clamp-2 mb-4`}>{a.description}</p>
+                            <div className="flex gap-2">
+                              <button onClick={() => openEditActivity(a)}
+                                className="flex-1 flex items-center justify-center gap-1 py-1.5 border border-emerald-200 rounded-lg text-xs text-emerald-600 hover:bg-emerald-50 transition">
+                                <Edit className="w-3.5 h-3.5" /> সম্পাদনা
+                              </button>
+                              <button onClick={() => setDeleteActivityConfirm(a.id)}
+                                className="flex-1 flex items-center justify-center gap-1 py-1.5 border border-red-200 rounded-lg text-xs text-red-500 hover:bg-red-50 transition">
+                                <Trash2 className="w-3.5 h-3.5" /> মুছুন
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

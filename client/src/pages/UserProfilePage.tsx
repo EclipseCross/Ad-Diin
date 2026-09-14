@@ -5,6 +5,9 @@ import {
   Home, Globe, Camera, Lock, Key, Eye, EyeOff, Shield 
 } from 'lucide-react';
 
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+
 interface UserData {
   id: number;
   name: string;
@@ -93,7 +96,8 @@ export default function UserProfilePage() {
     const token = localStorage.getItem('token');
     
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/me', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -141,7 +145,8 @@ export default function UserProfilePage() {
     try {
       setLoading(true);
 
-      const res = await fetch('http://127.0.0.1:8000/api/v1/user/update', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/user/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -201,7 +206,8 @@ export default function UserProfilePage() {
       setPasswordError('');
       setPasswordSuccess('');
 
-      const res = await fetch('http://127.0.0.1:8000/api/v1/user/change-password', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/user/change-password`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -242,7 +248,8 @@ export default function UserProfilePage() {
     const token = localStorage.getItem('token');
     
     try {
-      await fetch('http://127.0.0.1:8000/api/v1/auth/logout', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      await fetch(`${API_URL}/api/v1/auth/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -336,7 +343,7 @@ export default function UserProfilePage() {
                 )}
               </div>
               
-              {/* Action Buttons - এগুলো সবসময় দেখা যাবে */}
+              {/* Action Buttons */}
               {!editing && !changingPassword ? (
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -355,7 +362,7 @@ export default function UserProfilePage() {
                   </button>
                 </div>
               ) : (
-                <div className="h-12"></div> // Placeholder when editing
+                <div className="h-12"></div>
               )}
             </div>
 

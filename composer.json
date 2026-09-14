@@ -1,5 +1,6 @@
 {
     "require": {
-        "tymon/jwt-auth": "^2.2"
+        "tymon/jwt-auth": "^2.2",
+        "cloudinary-labs/cloudinary-laravel": "^3.0"
     }
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
 
 export default function UserLoginPage() {
   const [email, setEmail] = useState('');
@@ -22,7 +23,7 @@ export default function UserLoginPage() {
       setLoading(true);
       setError('');
 
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
+      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

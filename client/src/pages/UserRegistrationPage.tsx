@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+
 export default function UserRegistrationPage() {
   const [formData, setFormData] = useState({
     name: '',
@@ -56,7 +59,8 @@ export default function UserRegistrationPage() {
       setError('');
       setValidationErrors({});
 
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/register', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

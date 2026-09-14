@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield, Clock, RefreshCw } from 'lucide-react';
 
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+
 export default function EmailVerificationPage() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -70,7 +73,8 @@ export default function EmailVerificationPage() {
     setError('');
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/verify/verify-code', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/verify/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: fullCode })
@@ -98,7 +102,8 @@ export default function EmailVerificationPage() {
     setError('');
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/verify/resend-code', {
+      // ✅ এখানে API_URL ব্যবহার করুন
+      const res = await fetch(`${API_URL}/api/v1/verify/resend-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

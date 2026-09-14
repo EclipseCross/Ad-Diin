@@ -15,23 +15,46 @@ services:
       - ./database/migration/addiin.sql:/docker-entrypoint-initdb.d/addiin.sql
     networks:
       - addiin_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_BACKEND_ENDPOINT: http://localhost:8000
     container_name: addiin_app
     restart: unless-stopped
     ports:
       - "8000:80"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
+      # App
+      APP_NAME: Laravel
+      APP_ENV: local
+      APP_KEY: base64:cvU0kd8lqf+gsnO3oi7pMKEfPNYzMVjCmCJfrXTD53c=
+      APP_DEBUG: true
+      APP_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:8000
+
+      # Database
+      DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
       DB_DATABASE: addiin
       DB_USERNAME: root
       DB_PASSWORD: rootpassword
-      APP_URL: http://localhost:8000
-      FRONTEND_URL: http://localhost:8000
+
+      # JWT
+      JWT_SECRET: 79vhPtfuQ77gW7usSEwpXYqfERrHVLBW5xaApa7vz0YqXdmlwHqWrAgS6fuJ89jm
+
+      # Frontend build variable
+      VITE_BACKEND_ENDPOINT: http://localhost:8000
     networks:
       - addiin_network
 

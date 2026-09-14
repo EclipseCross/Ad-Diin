@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Download, MoonStar, Share2, Sun, Calendar } from 'lucide-react'; // 👈 ChevronRight removed
+import { Clock3, Download, MoonStar, Share2, Sun, Calendar } from 'lucide-react';
+
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
 
 type ApiResponse = {
   code: number;
@@ -254,15 +257,15 @@ export default function EventsPage() {
     };
   }, []);
 
-  // 👇 Fetch Islamic Events from your Laravel backend
+  // 👇 Fetch Islamic Events from your Laravel backend - ✅ ঠিক করা হলো
   useEffect(() => {
     const fetchIslamicEvents = async () => {
       try {
         setEventsLoading(true);
         setEventsError('');
         
-        // Fetch from your Laravel backend
-        const response = await fetch('http://127.0.0.1:8000/api/v1/events/all');
+        // ✅ এখানে API_URL ব্যবহার করুন
+        const response = await fetch(`${API_URL}/api/v1/events/all`);
         const data = await response.json();
         
         if (data.success) {
@@ -382,12 +385,12 @@ export default function EventsPage() {
   };
 
   // Get next event (closest upcoming)
-const nextEvent = islamicEvents
-.filter(event => event.days_remaining > 0)
-.reduce<IslamicEvent | null>((prev, curr) => {
-  if (prev === null) return curr;
-  return prev.days_remaining < curr.days_remaining ? prev : curr;
-}, null);
+  const nextEvent = islamicEvents
+    .filter(event => event.days_remaining > 0)
+    .reduce<IslamicEvent | null>((prev, curr) => {
+      if (prev === null) return curr;
+      return prev.days_remaining < curr.days_remaining ? prev : curr;
+    }, null);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50/40 py-8 px-4 md:px-8">

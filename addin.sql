@@ -1,312 +1,315 @@
-CREATE TABLE prayer_times (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    prayer_name VARCHAR(50) NOT NULL,     -- 'fajr_azan', 'fajr_jamaat', 'tahajjut', etc
-    prayer_time TIME NOT NULL,
-    display_name_en VARCHAR(50) NOT NULL,
-    display_name_bn VARCHAR(50) NOT NULL,
-    category VARCHAR(20) NOT NULL,        -- 'fard', 'nafl', 'wajib', 'sunnah'
-    prayer_type VARCHAR(20) NOT NULL,      -- 'azan', 'jamaat', 'optional'
-    display_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP NULL,
-    updated_at TIMESTAMP NULL
-);
-DROP TABLE IF EXISTS prayer_times;
--- Insert data
-INSERT INTO prayer_times (prayer_name, prayer_time, display_name_en, display_name_bn, category, prayer_type, display_order) VALUES
--- Fard prayers - Azan
+-- =========================================================
+-- Ad-Diin Database - CLEAN / FIXED SQL
+-- Purpose: Restore the old Ad-Diin database safely in MySQL/XAMPP
+-- =========================================================
+
+CREATE DATABASE IF NOT EXISTS `addiin`
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE `addiin`;
+
+-- Allow this script to be re-run safely
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS `messages`;
+DROP TABLE IF EXISTS `conversations`;
+DROP TABLE IF EXISTS `donations`;
+DROP TABLE IF EXISTS `milads`;
+DROP TABLE IF EXISTS `verifications`;
+DROP TABLE IF EXISTS `password_reset_tokens`;
+DROP TABLE IF EXISTS `islamic_events`;
+DROP TABLE IF EXISTS `activities`;
+DROP TABLE IF EXISTS `contacts`;
+DROP TABLE IF EXISTS `prayer_times`;
+DROP TABLE IF EXISTS `users`;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- =========================================================
+-- 1. USERS
+-- =========================================================
+CREATE TABLE `users` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `email` VARCHAR(100) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(20) NULL,
+    `address` VARCHAR(255) NULL,
+    `city` VARCHAR(100) NULL,
+    `postal_code` VARCHAR(20) NULL,
+    `date_of_birth` DATE NULL,
+    `gender` ENUM('male', 'female', 'other') NULL,
+    `profile_picture` VARCHAR(255) NULL,
+    `role` ENUM('user', 'admin') DEFAULT 'user',
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `email_verified_at` TIMESTAMP NULL,
+    `remember_token` VARCHAR(100) NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password for these two test accounts: 123456
+INSERT INTO `users`
+(`name`, `email`, `password`, `role`, `created_at`, `updated_at`)
+VALUES
+('Test User', 'test@test.com',
+ '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'user', NOW(), NOW()),
+('Admin User', 'admin@addiin.com',
+ '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'admin', NOW(), NOW());
+
+-- =========================================================
+-- 2. PRAYER TIMES
+-- =========================================================
+CREATE TABLE `prayer_times` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `prayer_name` VARCHAR(50) NOT NULL,
+    `prayer_time` TIME NOT NULL,
+    `display_name_en` VARCHAR(50) NOT NULL,
+    `display_name_bn` VARCHAR(50) NOT NULL,
+    `category` VARCHAR(20) NOT NULL,
+    `prayer_type` VARCHAR(20) NOT NULL,
+    `display_order` INT DEFAULT 0,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `prayer_times`
+(`prayer_name`, `prayer_time`, `display_name_en`, `display_name_bn`,
+ `category`, `prayer_type`, `display_order`)
+VALUES
 ('fajr_azan', '05:00:00', 'Fajr Azan', 'ফজর আযান', 'fard', 'azan', 1),
 ('dhuhr_azan', '12:15:00', 'Dhuhr Azan', 'যোহর আযান', 'fard', 'azan', 3),
 ('asr_azan', '15:45:00', 'Asr Azan', 'আসর আযান', 'fard', 'azan', 5),
 ('maghrib_azan', '18:30:00', 'Maghrib Azan', 'মাগরিব আযান', 'fard', 'azan', 7),
 ('isha_azan', '20:00:00', 'Isha Azan', 'ইশা আযান', 'fard', 'azan', 9),
 
--- Fard prayers - Jamaat
 ('fajr_jamaat', '05:30:00', 'Fajr Jamaat', 'ফজর জামাত', 'fard', 'jamaat', 2),
 ('dhuhr_jamaat', '12:30:00', 'Dhuhr Jamaat', 'যোহর জামাত', 'fard', 'jamaat', 4),
 ('asr_jamaat', '16:00:00', 'Asr Jamaat', 'আসর জামাত', 'fard', 'jamaat', 6),
 ('maghrib_jamaat', '18:35:00', 'Maghrib Jamaat', 'মাগরিব জামাত', 'fard', 'jamaat', 8),
 ('isha_jamaat', '20:15:00', 'Isha Jamaat', 'ইশা জামাত', 'fard', 'jamaat', 10),
 
--- Nafl prayers
 ('tahajjut', '02:30:00', 'Tahajjut', 'তাহাজ্জুদ', 'nafl', 'optional', 11),
 ('ishraq', '05:45:00', 'Ishraq', 'ইশরাক', 'nafl', 'optional', 12),
 ('duha', '08:00:00', 'Duha', 'দুহা', 'nafl', 'optional', 13),
 ('awwabin', '18:45:00', 'Awwabin', 'আওয়াবীন', 'nafl', 'optional', 14);
 
+-- =========================================================
+-- 3. PASSWORD RESET TOKENS
+-- =========================================================
+CREATE TABLE `password_reset_tokens` (
+    `email` VARCHAR(100) PRIMARY KEY,
+    `token` VARCHAR(255) NOT NULL,
+    `created_at` TIMESTAMP NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- Table 2: users (for authentication)
--- ============================================
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NULL,
-    role ENUM('user', 'admin') DEFAULT 'user',
-    is_active BOOLEAN DEFAULT true,
-    email_verified_at TIMESTAMP NULL,
-    remember_token VARCHAR(100) NULL,
-    created_at TIMESTAMP NULL,
-    updated_at TIMESTAMP NULL
-);
+-- =========================================================
+-- 4. EMAIL VERIFICATIONS
+-- =========================================================
+CREATE TABLE `verifications` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `email` VARCHAR(100) NOT NULL,
+    `code` VARCHAR(6) NOT NULL,
+    `expires_at` TIMESTAMP NOT NULL,
+    `is_used` BOOLEAN DEFAULT FALSE,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_verifications_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert test users (password: 123456)
-INSERT INTO users (name, email, password, role, created_at, updated_at) VALUES
-('Test User', 'test@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user', NOW(), NOW()),
-('Admin User', 'admin@addiin.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NOW(), NOW());
+-- =========================================================
+-- 5. MILADS
+-- =========================================================
+CREATE TABLE `milads` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `name` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(20) NOT NULL,
+    `description` TEXT NOT NULL,
+    `milad_date` DATE NOT NULL,
+    `status` ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
+    `admin_remark` TEXT NULL,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_milads_user_id` (`user_id`),
+    INDEX `idx_milads_status` (`status`),
+    CONSTRAINT `fk_milads_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- Table 3: password_reset_tokens (for forgot password)
--- ============================================
-CREATE TABLE password_reset_tokens (
-    email VARCHAR(100) PRIMARY KEY,
-    token VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NULL
-);
+-- =========================================================
+-- 6. ISLAMIC EVENTS
+-- =========================================================
+CREATE TABLE `islamic_events` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `event_name` VARCHAR(255) NOT NULL,
+    `event_date` DATE NOT NULL,
+    `hijri_date` VARCHAR(100) NOT NULL,
+    `hijri_month` VARCHAR(50) NOT NULL,
+    `hijri_day` INT NOT NULL,
+    `event_type` ENUM('special', 'religious', 'festival', 'historical') DEFAULT 'religious',
+    `description` TEXT NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `display_order` INT DEFAULT 0,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add these columns to users table
-ALTER TABLE users 
-ADD COLUMN address VARCHAR(255) NULL AFTER phone,
-ADD COLUMN city VARCHAR(100) NULL AFTER address,
-ADD COLUMN postal_code VARCHAR(20) NULL AFTER city,
-ADD COLUMN date_of_birth DATE NULL AFTER postal_code,
-ADD COLUMN gender ENUM('male', 'female', 'other') NULL AFTER date_of_birth,
-ADD COLUMN profile_picture VARCHAR(255) NULL AFTER gender;
+INSERT INTO `islamic_events`
+(`event_name`, `event_date`, `hijri_date`, `hijri_month`, `hijri_day`,
+ `event_type`, `description`, `display_order`)
+VALUES
+('Shab e Meraj 2026', '2026-01-17', '27 Rajab 1447h', 'Rajab', 27,
+ 'religious', 'Night of Ascension', 1),
+('Shab e Barat 2026', '2026-02-04', '15 Shaban 1447h', 'Shaban', 15,
+ 'religious', 'Night of Forgiveness', 2),
+('Ramadan 2026', '2026-02-19', '1 Ramadan 1447h', 'Ramadan', 1,
+ 'religious', 'First day of Ramadan', 3),
+('Laylat al Qadr 2026', '2026-03-17', '27 Ramadan 1447h', 'Ramadan', 27,
+ 'special', 'Night of Power', 4),
+('Eid ul Fitr 2026', '2026-03-20', '1 Shawwal 1447h', 'Shawwal', 1,
+ 'festival', 'Festival of Breaking Fast', 5),
+('Hajj 2026', '2026-05-24', '7 Dhul Hijjah 1447h', 'Dhul Hijjah', 7,
+ 'religious', 'Day of Arafah', 6),
+('Eid al Adha 2026', '2026-05-27', '10 Dhul Hijjah 1447h', 'Dhul Hijjah', 10,
+ 'festival', 'Festival of Sacrifice', 7),
+('Muharram 2026', '2026-06-16', '1 Muharram 1448h', 'Muharram', 1,
+ 'religious', 'Islamic New Year', 8),
+('Ashura 2026', '2026-06-25', '10 Muharram 1448h', 'Muharram', 10,
+ 'historical', 'Day of Ashura', 9),
+('12 Rabi ul Awal 2026', '2026-08-25', '12 Rabi ul Awal 1448h', 'Rabi ul Awal', 12,
+ 'festival', 'Birthday of Prophet Muhammad (PBUH)', 10);
 
--- ============================================
--- Table 4: verifications (for email verification)
--- ============================================
-CREATE TABLE IF NOT EXISTS verifications (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(100) NOT NULL,
-    code VARCHAR(6) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    is_used BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_verifications_email (email)
-);
-
--- Check if email_verified_at already exists in users table
--- If not, add it
-SET @dbname = DATABASE();
-SET @tablename = "users";
-SET @columnname = "email_verified_at";
-SET @preparedStatement = (SELECT IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname) > 0,
-    "SELECT 1",
-    CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", @columnname, " TIMESTAMP NULL AFTER remember_token;")
-));
-PREPARE stmt FROM @preparedStatement;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- ============================================
--- Table 5: milads (for milad booking)
--- ============================================
-CREATE TABLE IF NOT EXISTS milads (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    description TEXT NOT NULL,
-    milad_date DATE NOT NULL,
-    status ENUM('pending', 'approved', 'rejected', 'completed') DEFAULT 'pending',
-    admin_remark TEXT NULL,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_milads_user_id (user_id),
-    INDEX idx_milads_status (status)
-);
-
-
--- ============================================
--- Check if milads table exists
--- ============================================
-USE addiin;
-
--- Show current structure
-DESCRIBE milads;
-
--- ============================================
--- Add admin_remark column to milads table (if not exists)
--- ============================================
-SET @dbname = DATABASE();
-SET @tablename = "milads";
-SET @columnname = "admin_remark";
-SET @preparedStatement = (SELECT IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
-     WHERE TABLE_SCHEMA = @dbname 
-     AND TABLE_NAME = @tablename 
-     AND COLUMN_NAME = @columnname) > 0,
-    "SELECT 'admin_remark column already exists'",
-    CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", 
-           @columnname, " TEXT NULL AFTER status;")
-));
-PREPARE stmt FROM @preparedStatement;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- ============================================
--- Verify the column was added
--- ============================================
-DESCRIBE milads;
-
-
--- ============================================
--- Table: islamic_events
--- ============================================
-CREATE TABLE islamic_events (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    event_name VARCHAR(255) NOT NULL,
-    event_date DATE NOT NULL,
-    hijri_date VARCHAR(100) NOT NULL,
-    hijri_month VARCHAR(50) NOT NULL,
-    hijri_day INT NOT NULL,
-    event_type ENUM('special', 'religious', 'festival', 'historical') DEFAULT 'religious',
-    description TEXT NULL,
-    is_active BOOLEAN DEFAULT true,
-    display_order INT DEFAULT 0,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- ============================================
--- Values (Data)
--- ============================================
-INSERT INTO islamic_events (event_name, event_date, hijri_date, hijri_month, hijri_day, event_type, description, display_order) VALUES
-('Shab e Meraj 2026', '2026-01-17', '27 Rajab 1447h', 'Rajab', 27, 'religious', 'Night of Ascension', 1),
-('Shab e Barat 2026', '2026-02-04', '15 Shaban 1447h', 'Shaban', 15, 'religious', 'Night of Forgiveness', 2),
-('Ramadan 2026', '2026-02-19', '1 Ramadan 1447h', 'Ramadan', 1, 'religious', 'First day of Ramadan', 3),
-('Laylat al Qadr 2026', '2026-03-17', '27 Ramadan 1447h', 'Ramadan', 27, 'special', 'Night of Power', 4),
-('Eid ul Fitr 2026', '2026-03-20', '1 Shawwal 1447h', 'Shawwal', 1, 'festival', 'Festival of Breaking Fast', 5),
-('Hajj 2026', '2026-05-24', '7 Dhul Hijjah 1447h', 'Dhul Hijjah', 7, 'religious', 'Day of Arafah', 6),
-('Eid al Adha 2026', '2026-05-27', '10 Dhul Hijjah 1447h', 'Dhul Hijjah', 10, 'festival', 'Festival of Sacrifice', 7),
-('Muharram 2026', '2026-06-16', '1 Muharram 1448h', 'Muharram', 1, 'religious', 'Islamic New Year', 8),
-('Ashura 2026', '2026-06-25', '10 Muharram 1448h', 'Muharram', 10, 'historical', 'Day of Ashura', 9),
-('12 Rabi ul Awal 2026', '2026-08-25', '12 Rabi ul Awal 1448h', 'Rabi ul Awal', 12, 'festival', 'Birthday of Prophet Muhammad (PBUH)', 10);
-
-
--- ============================================
--- Table 6: donations (for payment records)
--- ============================================
-CREATE TABLE IF NOT EXISTS donations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NULL,
-    name VARCHAR(255) NULL,
-    email VARCHAR(255) NULL,
-    phone VARCHAR(20) NULL,
-    category VARCHAR(50) NOT NULL,        -- 'zakat', 'iftar', 'durjog', 'sitarto', 'gachropon', 'kurbani', 'orphan', 'general'
-    amount DECIMAL(10,2) NOT NULL,
-    currency VARCHAR(10) DEFAULT 'BDT',
-    tran_id VARCHAR(100) NOT NULL UNIQUE,
-    val_id VARCHAR(100) NULL,
-    bank_tran_id VARCHAR(100) NULL,
-    payment_status VARCHAR(50) DEFAULT 'pending',  -- 'pending', 'completed', 'failed', 'cancelled'
-    payment_method VARCHAR(50) NULL,                -- 'bkash', 'nagad', 'rocket', 'bank', 'sslcommerz'
-    ssl_response TEXT NULL,
-    notes TEXT NULL,
-    is_anonymous BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    -- Foreign key to users table
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    
-    -- Indexes for performance
-    INDEX idx_donations_tran_id (tran_id),
-    INDEX idx_donations_user_id (user_id),
-    INDEX idx_donations_category (category),
-    INDEX idx_donations_payment_status (payment_status),
-    INDEX idx_donations_created_at (created_at)
-);
-
-DESCRIBE users;
--- ============================================
--- Table 7: conversations
--- ============================================
-CREATE TABLE conversations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    admin_id INT NULL,
-    subject VARCHAR(255) NULL,
-    status ENUM('active', 'closed', 'pending') NOT NULL DEFAULT 'active',
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    INDEX (user_id),
-    INDEX (admin_id),
-
-    CONSTRAINT fk_user
-        FOREIGN KEY (user_id) REFERENCES users(id)
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_admin
-        FOREIGN KEY (admin_id) REFERENCES users(id)
+-- =========================================================
+-- 7. DONATIONS
+-- =========================================================
+CREATE TABLE `donations` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NULL,
+    `name` VARCHAR(255) NULL,
+    `email` VARCHAR(255) NULL,
+    `phone` VARCHAR(20) NULL,
+    `category` VARCHAR(50) NOT NULL,
+    `amount` DECIMAL(10,2) NOT NULL,
+    `currency` VARCHAR(10) DEFAULT 'BDT',
+    `tran_id` VARCHAR(100) NOT NULL UNIQUE,
+    `val_id` VARCHAR(100) NULL,
+    `bank_tran_id` VARCHAR(100) NULL,
+    `payment_status` VARCHAR(50) DEFAULT 'pending',
+    `payment_method` VARCHAR(50) NULL,
+    `ssl_response` TEXT NULL,
+    `notes` TEXT NULL,
+    `is_anonymous` BOOLEAN DEFAULT FALSE,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_donations_user_id` (`user_id`),
+    INDEX `idx_donations_category` (`category`),
+    INDEX `idx_donations_payment_status` (`payment_status`),
+    INDEX `idx_donations_created_at` (`created_at`),
+    CONSTRAINT `fk_donations_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
         ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================
--- Table 8: messages
--- ============================================
-CREATE TABLE IF NOT EXISTS messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    conversation_id INT NOT NULL,
-    sender_id INT NOT NULL,
-    message LONGTEXT NOT NULL,
-    sender_type ENUM('user', 'admin') NOT NULL DEFAULT 'user',
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    read_at TIMESTAMP NULL,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+-- =========================================================
+-- 8. CONVERSATIONS
+-- =========================================================
+CREATE TABLE `conversations` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `admin_id` INT NULL,
+    `subject` VARCHAR(255) NULL,
+    `status` ENUM('active', 'closed', 'pending') NOT NULL DEFAULT 'active',
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_conversations_user_id` (`user_id`),
+    INDEX `idx_conversations_admin_id` (`admin_id`),
+    CONSTRAINT `fk_conversations_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+        ON DELETE CASCADE,
+    CONSTRAINT `fk_conversations_admin`
+        FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    INDEX idx_messages_conversation_id (conversation_id),
-    INDEX idx_messages_sender_id (sender_id),
+-- =========================================================
+-- 9. MESSAGES
+-- =========================================================
+CREATE TABLE `messages` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `conversation_id` INT NOT NULL,
+    `sender_id` INT NOT NULL,
+    `message` LONGTEXT NOT NULL,
+    `sender_type` ENUM('user', 'admin') NOT NULL DEFAULT 'user',
+    `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
+    `read_at` TIMESTAMP NULL,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_messages_conversation_id` (`conversation_id`),
+    INDEX `idx_messages_sender_id` (`sender_id`),
+    CONSTRAINT `fk_messages_conversation`
+        FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`)
+        ON DELETE CASCADE,
+    CONSTRAINT `fk_messages_sender`
+        FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
-);
+-- =========================================================
+-- 10. CONTACTS
+-- =========================================================
+CREATE TABLE `contacts` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `company` VARCHAR(255) NULL,
+    `message` TEXT NOT NULL,
+    `status` ENUM('unread', 'read', 'replied') DEFAULT 'unread',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =========================================================
+-- 11. ACTIVITIES
+-- =========================================================
+CREATE TABLE `activities` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(255) NOT NULL,
+    `description` TEXT NOT NULL,
+    `image_url` VARCHAR(500) NULL,
+    `image_public_id` VARCHAR(255) NULL,
+    `category` VARCHAR(100) NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `display_order` INT DEFAULT 0,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_activities_is_active` (`is_active`),
+    INDEX `idx_activities_display_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =========================================================
+-- OPTIONAL: make an existing account admin
+-- Uncomment and replace the email if needed.
+-- =========================================================
+-- UPDATE `users`
+-- SET `role` = 'admin'
+-- WHERE `email` = 'your-email@example.com';
 
-
-
-
-
-
-
-
-
--- Show sample data (after inserts)
-SELECT * FROM donations ;
--- Show all tables
+-- =========================================================
+-- VERIFICATION
+-- =========================================================
 SHOW TABLES;
--- Show all data
-SELECT * FROM users;
 
-UPDATE users
-SET role = 'admin'
-WHERE email = 'danialhossain2024@gmail.com';
-SELECT * FROM islamic_events;
-SHOW COLUMNS FROM islamic_events LIKE 'event_type';
-
-SELECT * FROM conversations;
-SELECT * FROM messages;
-SELECT * FROM prayer_times; 
-SELECT * FROM verifications;
-SELECT * FROM password_reset_tokens;
-SELECT * from milads;
-delete from users where id =3;
-delete from verifications where id =5;
--- MySQL Workbench এ run করুন
-USE addiin;
-
-
-
-
-
-
-
+SELECT COUNT(*) AS users_count FROM `users`;
+SELECT COUNT(*) AS prayer_times_count FROM `prayer_times`;
+SELECT COUNT(*) AS events_count FROM `islamic_events`;
+SELECT COUNT(*) AS donations_count FROM `donations`;
+SELECT COUNT(*) AS conversations_count FROM `conversations`;
+SELECT COUNT(*) AS messages_count FROM `messages`;
+SELECT COUNT(*) AS contacts_count FROM `contacts`;
+SELECT COUNT(*) AS activities_count FROM `activities`;

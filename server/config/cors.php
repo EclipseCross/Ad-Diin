@@ -2,13 +2,16 @@
 
 return [
 
-    'paths' => ['*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', '*'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:5173'),
-        'https://yolande-unsegregable-kellee.ngrok-free.dev',  // 👈 সরাসরি ngrok URL
+        env('APP_URL', 'http://localhost:8001'),
+        'http://localhost:8001',
+        'http://localhost:5173',
+        'https://yolande-unsegregable-kellee.ngrok-free.dev',
     ],
 
     'allowed_origins_patterns' => [],

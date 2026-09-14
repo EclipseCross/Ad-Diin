@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Phone, FileText, AlertCircle, CheckCircle, Clock, XCircle, ArrowLeft } from 'lucide-react';
 
-const API_URL = 'http://127.0.0.1:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+const API_URL = `${API_BASE_URL}/api/v1`;
 
 interface MiladRequest {
   id: number;

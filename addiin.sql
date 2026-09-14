@@ -270,12 +270,43 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE DATABASE addiin;
 
+USE addiin;
+-- ============================================
+-- Table 9: contact
+-- ============================================
+CREATE TABLE `contacts` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `company` VARCHAR(255) NULL,
+  `message` TEXT NOT NULL,
+  `status` ENUM('unread','read') DEFAULT 'unread',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+ALTER TABLE contacts MODIFY COLUMN status ENUM('unread', 'read', 'replied') DEFAULT 'unread';
 
+-- ============================================
+-- Table:10 activities
+-- ============================================
+CREATE TABLE IF NOT EXISTS activities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    image_url VARCHAR(500) NULL,          -- Cloudinary URL
+    image_public_id VARCHAR(255) NULL,    -- Cloudinary public_id (for deletion)
+    category VARCHAR(100) NULL,           -- e.g. 'education', 'charity', 'youth'
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_activities_is_active (is_active),
+    INDEX idx_activities_display_order (display_order)
+);
 
-
-
-
+select * from activities;
 
 
 
@@ -286,7 +317,7 @@ SELECT * FROM donations ;
 SHOW TABLES;
 -- Show all data
 SELECT * FROM users;
-
+SELECT * FROM contacts;
 UPDATE users
 SET role = 'admin'
 WHERE email = 'danialhossain2024@gmail.com';

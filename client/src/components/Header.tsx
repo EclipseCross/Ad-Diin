@@ -2,6 +2,9 @@ import { User, LogOut, UserPlus, LogIn, Menu, X, Settings, FileText, Heart } fro
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 
+// ✅ API_URL যোগ করুন
+const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+
 export function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -61,7 +64,8 @@ export function Header() {
     const token = localStorage.getItem('token');
     try {
       if (token) {
-        await fetch('http://127.0.0.1:8000/api/v1/auth/logout', {
+        // ✅ এখানে API_URL ব্যবহার করুন
+        await fetch(`${API_URL}/api/v1/auth/logout`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -144,7 +148,7 @@ export function Header() {
                         <FileText className="w-4 h-4" /> My Milad Requests
                       </button>
 
-                      {/* ✅ NEW: My Donations Button */}
+                      {/* My Donations Button */}
                       <button
                         onClick={() => { setIsDropdownOpen(false); navigate('/my-donations'); }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 flex items-center gap-2"

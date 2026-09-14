@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded rectangle with gradient -->
+  <rect width="200" height="100" fill="url(#grad)" rx="15" ry="15"/>
+  
+  <!-- Border -->
+  <rect width="198" height="98" x="1" y="1" fill="none" 
+        stroke="rgba(255,255,255,0.3)" stroke-width="2" rx="14" ry="14"/>
+  
+  <!-- Arabic Text "الدين" -->
+  <text x="100" y="60" font-family="Arial, Helvetica, sans-serif" 
+        font-size="48" font-weight="bold" fill="white" text-anchor="middle">
+    الدين
+  </text>
+  
+  <!-- Small English Text -->
+  <text x="100" y="82" font-family="Arial, Helvetica, sans-serif" 
+        font-size="12" fill="rgba(255,255,255,0.9)" text-anchor="middle">
+    AD - DIIN
+  </text>
+</svg>
