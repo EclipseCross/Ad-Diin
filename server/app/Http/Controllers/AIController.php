@@ -15,60 +15,88 @@ class AIController extends Controller
         $this->aiService = $aiService;
     }
 
-    /**
-     * Get dynamic AI response
-     */
+
+    // ==========================================================
+    // AI Chat
+    // ==========================================================
+
     public function chat(Request $request): JsonResponse
     {
         $request->validate([
             'message' => 'required|string|max:1000',
-            'history' => 'sometimes|array'
+            'history' => 'sometimes|array',
         ]);
 
         try {
-            // Get dynamic response from AI
-            $response = $this->aiService->chat($request->message);
 
-            return response()->json([
-                'success' => true,
-                'response' => $response,
-                'timestamp' => now()->toDateTimeString()
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'response' => 'দুঃখিত, সার্ভার সমস্যা হচ্ছে।',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Chat with conversation history
-     */
-    public function chatWithHistory(Request $request): JsonResponse
-    {
-        $request->validate([
-            'message' => 'required|string',
-            'history' => 'array'
-        ]);
-
-        try {
-            $response = $this->aiService->chatWithContext(
-                $request->message, 
+            $result = $this->aiService->chatWithContext(
+                $request->message,
                 $request->history ?? []
             );
 
             return response()->json([
                 'success' => true,
-                'response' => $response
+
+                'response' => $result['response'] ?? '',
+
+                'sources' => $result['sources'] ?? [],
+
+                'timestamp' => now()->toDateTimeString(),
             ]);
 
         } catch (\Exception $e) {
+
             return response()->json([
                 'success' => false,
-                'response' => 'Error: ' . $e->getMessage()
+
+                'response' => 'দুঃখিত, সার্ভার সমস্যা হচ্ছে।',
+
+                'sources' => [],
+
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    // ==========================================================
+    // AI Chat With History
+    // ==========================================================
+
+    public function chatWithHistory(Request $request): JsonResponse
+    {
+        $request->validate([
+            'message' => 'required|string|max:1000',
+            'history' => 'sometimes|array',
+        ]);
+
+        try {
+
+            $result = $this->aiService->chatWithContext(
+                $request->message,
+                $request->history ?? []
+            );
+
+            return response()->json([
+                'success' => true,
+
+                'response' => $result['response'] ?? '',
+
+                'sources' => $result['sources'] ?? [],
+
+                'timestamp' => now()->toDateTimeString(),
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+
+                'response' => 'দুঃখিত, সার্ভার সমস্যা হচ্ছে।',
+
+                'sources' => [],
+
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

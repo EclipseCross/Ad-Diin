@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Contact;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class ContactController extends Controller
 {
@@ -15,62 +16,141 @@ class ContactController extends Controller
     {
         $request->validate([
             'name'    => 'required|string|max:255',
-            'email'   => 'required|email',
+            'email'   => 'required|email|max:255',
             'company' => 'nullable|string|max:255',
             'message' => 'required|string',
         ]);
 
-        $contact = Contact::create($request->only(['name', 'email', 'company', 'message']));
+        // Save message to database
+        $contact = Contact::create([
+            'name'    => $request->name,
+            'email'   => $request->email,
+            'company' => $request->company,
+            'message' => $request->message,
+            'status'  => 'unread',
+        ]);
 
-        // Admin কে নতুন message এর notification পাঠাও
-        Mail::send([], [], function ($mail) use ($contact) {
-            $mail->to(env('MAIL_USERNAME'))
-                 ->subject('New Contact Message from ' . $contact->name)
-                 ->setBody(
-                     "New message received on Ad-Diin contact form.\n\n" .
-                     "Name: {$contact->name}\n" .
-                     "Email: {$contact->email}\n" .
-                     "Company: {$contact->company}\n\n" .
-                     "Message:\n{$contact->message}\n\n" .
-                     "---\n" .
-                     "Login to admin panel to reply:\n" .
-                     env('FRONTEND_URL') . "/admin/messages",
-                     'text/plain'
-                 );
-        });
+        // ==========================================
+        // Send email to Admin
+        // ==========================================
+        try {
 
-        // User কে confirmation email পাঠাও
-        Mail::send([], [], function ($mail) use ($contact) {
-            $mail->to($contact->email)
-                 ->subject('We received your message — Ad-Diin')
-                 ->setBody(
-                     "Assalamu Alaikum {$contact->name},\n\n" .
-                     "JazakAllah khair for reaching out to us.\n" .
-                     "We have received your message and will respond to you shortly, In sha Allah.\n\n" .
-                     "Your message:\n" .
-                     "---\n" .
-                     "{$contact->message}\n" .
-                     "---\n\n" .
-                     "Ad-Diin Team\n" .
-                     env('FRONTEND_URL'),
-                     'text/plain'
-                 );
-        });
+            Mail::raw(
+                "New message received on Ad-Diin contact form.\n\n" .
+                "Name: {$contact->name}\n" .
+                "Email: {$contact->email}\n" .
+                "Company: " . ($contact->company ?? 'N/A') . "\n\n" .
+                "Message:\n{$contact->message}\n\n" .
+                "--------------------------------\n" .
+                "Login to admin panel:\n" .
+                env('FRONTEND_URL') . "/admin/messages",
+                function ($mail) use ($contact) {
+
+                    $mail->to(env('MAIL_USERNAME'))
+                        ->subject(
+                            'New Contact Message from ' .
+                            $contact->name
+                        );
+                }
+            );
+
+            Log::info(
+                'Admin notification email sent',
+                [
+                    'contact_id' => $contact->id,
+                    'email' => $contact->email,
+                ]
+            );
+
+        } catch (\Throwable $e) {
+
+            // Email fail হলেও contact submission fail করবে না
+            Log::error(
+                'Admin notification email failed',
+                [
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]
+            );
+        }
+
+
+        // ==========================================
+        // Send confirmation email to User
+        // ==========================================
+        try {
+
+            Mail::raw(
+                "Assalamu Alaikum {$contact->name},\n\n" .
+                "JazakAllah khair for reaching out to us.\n\n" .
+                "We have received your message and will respond to you shortly, In sha Allah.\n\n" .
+                "Your message:\n" .
+                "--------------------------------\n" .
+                "{$contact->message}\n" .
+                "--------------------------------\n\n" .
+                "Ad-Diin Team\n" .
+                env('FRONTEND_URL'),
+
+                function ($mail) use ($contact) {
+
+                    $mail->to($contact->email)
+                        ->subject(
+                            'We received your message — Ad-Diin'
+                        );
+                }
+            );
+
+            Log::info(
+                'User confirmation email sent',
+                [
+                    'contact_id' => $contact->id,
+                    'email' => $contact->email,
+                ]
+            );
+
+        } catch (\Throwable $e) {
+
+            // Email fail হলেও API success থাকবে
+            Log::error(
+                'User confirmation email failed',
+                [
+                    'contact_id' => $contact->id,
+                    'email' => $contact->email,
+                    'error' => $e->getMessage(),
+                ]
+            );
+        }
+
+
+        // ==========================================
+        // API Response
+        // ==========================================
 
         return response()->json([
             'success' => true,
             'message' => 'Message sent successfully',
-        ]);
+            'data' => [
+                'id' => $contact->id,
+                'name' => $contact->name,
+                'email' => $contact->email,
+            ],
+        ], 200);
     }
+
 
     // ==========================================
     // Admin: list all messages
     // ==========================================
     public function index()
     {
-        $messages = Contact::orderBy('created_at', 'desc')->get();
+        $messages = Contact::orderBy(
+            'created_at',
+            'desc'
+        )->get();
+
         return response()->json($messages);
     }
+
 
     // ==========================================
     // Admin: mark a message as read
@@ -78,7 +158,9 @@ class ContactController extends Controller
     public function markRead($id)
     {
         $contact = Contact::findOrFail($id);
+
         $contact->status = 'read';
+
         $contact->save();
 
         return response()->json([
@@ -87,8 +169,9 @@ class ContactController extends Controller
         ]);
     }
 
+
     // ==========================================
-    // Admin: reply to a user via email
+    // Admin: reply to user via email
     // ==========================================
     public function reply(Request $request, $id)
     {
@@ -98,25 +181,52 @@ class ContactController extends Controller
 
         $contact = Contact::findOrFail($id);
 
-        Mail::send([], [], function ($mail) use ($contact, $request) {
-            $mail->to($contact->email)
-                 ->from(env('MAIL_FROM_ADDRESS'), 'Ad-Diin Team')
-                 ->subject('Reply from Ad-Diin — regarding your message')
-                 ->setBody(
-                     "Assalamu Alaikum {$contact->name},\n\n" .
-                     $request->reply_message . "\n\n" .
-                     "---\n" .
-                     "This is a reply to your message:\n" .
-                     "\"{$contact->message}\"\n\n" .
-                     "JazakAllah khair,\n" .
-                     "Ad-Diin Team\n" .
-                     env('FRONTEND_URL'),
-                     'text/plain'
-                 );
-        });
+        try {
 
-        // Status update করো replied এ
+            Mail::raw(
+                "Assalamu Alaikum {$contact->name},\n\n" .
+                $request->reply_message .
+                "\n\n" .
+                "--------------------------------\n" .
+                "This is a reply to your original message:\n" .
+                "\"{$contact->message}\"\n\n" .
+                "JazakAllah khair,\n" .
+                "Ad-Diin Team\n" .
+                env('FRONTEND_URL'),
+
+                function ($mail) use ($contact) {
+
+                    $mail->to($contact->email)
+                        ->from(
+                            env('MAIL_FROM_ADDRESS'),
+                            'Ad-Diin Team'
+                        )
+                        ->subject(
+                            'Reply from Ad-Diin — regarding your message'
+                        );
+                }
+            );
+
+        } catch (\Throwable $e) {
+
+            Log::error(
+                'Contact reply email failed',
+                [
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]
+            );
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send reply email.',
+            ], 500);
+        }
+
+
+        // Update status
         $contact->status = 'replied';
+
         $contact->save();
 
         return response()->json([
@@ -125,12 +235,14 @@ class ContactController extends Controller
         ]);
     }
 
+
     // ==========================================
-    // Admin: delete a message
+    // Admin: delete message
     // ==========================================
     public function destroy($id)
     {
         $contact = Contact::findOrFail($id);
+
         $contact->delete();
 
         return response()->json([
