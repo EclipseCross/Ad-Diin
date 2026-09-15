@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Trash2, Image as ImageIcon, Smile } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -15,6 +15,7 @@ interface Message {
   conversation_id: number;
   sender_id: number;
   message: string;
+  image_url?: string | null;
   sender_type: 'user' | 'admin';
   is_read: boolean;
   created_at: string;
@@ -51,6 +52,9 @@ export default function MessagingPage() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [showStickers, setShowStickers] = useState(false);
+  const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -265,27 +269,39 @@ export default function MessagingPage() {
   };
 
   const sendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation) return;
+    if ((!messageInput.trim() && !imageFile) || !selectedConversation || sending) return;
 
     try {
+      setSending(true);
       setError(null);
       const token = localStorage.getItem('token');
+      const formData = new FormData();
+      if (messageInput.trim()) formData.append('message', messageInput.trim());
+      if (imageFile) formData.append('image', imageFile);
       const response = await axios.post(
         `${API_URL}/api/v1/messages/${selectedConversation.id}/send`,
-        { message: messageInput },
+        formData,
         { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
       );
       
       if (response.data.success) {
-        setMessages([...messages, response.data.message]);
+        setMessages((items) => [...items, response.data.message]);
         setMessageInput('');
+        setImageFile(null);
         loadConversations(true);
       }
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Failed to send message';
       setError(errorMsg);
       toast.error('Error: ' + errorMsg);
+    } finally {
+      setSending(false);
     }
+  };
+
+  const addSticker = (sticker: string) => {
+    setMessageInput((value) => `${value}${sticker}`);
+    setShowStickers(false);
   };
 
   const deleteMessage = async (messageId: number, mode: 'me' | 'everyone') => {
@@ -402,6 +418,11 @@ export default function MessagingPage() {
                             {msg.sender?.name}
                           </p>
                           <p className="text-sm">{msg.message}</p>
+                          {msg.image_url && (
+                            <a href={msg.image_url} target="_blank" rel="noreferrer" className="mt-2 block">
+                              <img src={msg.image_url} alt="Message attachment" className="max-h-64 max-w-full rounded-xl object-cover" />
+                            </a>
+                          )}
                           <p className="text-xs opacity-50 mt-1">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                             {msg.sender_type === 'user' && (
@@ -441,18 +462,54 @@ export default function MessagingPage() {
                 {/* Input */}
                 {selectedConversation.status === 'active' && (
                   <div className="border-t border-emerald-200 p-4 bg-white">
-                    <div className="flex gap-2">
+                    {imageFile && (
+                      <div className="mb-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                        <span className="truncate">{imageFile.name}</span>
+                        <button type="button" onClick={() => setImageFile(null)} className="ml-3 font-semibold hover:text-red-600">Remove</button>
+                      </div>
+                    )}
+                    {showStickers && (
+                      <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                        {['👍', '❤️', '😂', '😊', '🤲', '🕌', '✨', '🎉'].map((sticker) => (
+                          <button key={sticker} type="button" onClick={() => addSticker(sticker)} className="rounded-lg bg-white px-3 py-2 text-xl shadow-sm hover:bg-emerald-100">
+                            {sticker}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer rounded-lg p-2 text-emerald-600 hover:bg-emerald-50" title="Attach image">
+                        <ImageIcon className="h-5 w-5" />
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('Image must be 10 MB or smaller');
+                            return;
+                          }
+                          setImageFile(file);
+                          event.target.value = '';
+                        }} />
+                      </label>
+                      <button type="button" onClick={() => setShowStickers((value) => !value)} className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50" title="Stickers and emoji">
+                        <Smile className="h-5 w-5" />
+                      </button>
                       <input
                         type="text"
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            void sendMessage();
+                          }
+                        }}
                         placeholder="Type your message..."
                         className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                       <button
                         onClick={sendMessage}
-                        disabled={!messageInput.trim()}
+                        disabled={(!messageInput.trim() && !imageFile) || sending}
                         className="rounded-lg bg-emerald-600 p-2 text-white hover:bg-emerald-700 disabled:bg-gray-400"
                       >
                         <Send className="h-5 w-5" />

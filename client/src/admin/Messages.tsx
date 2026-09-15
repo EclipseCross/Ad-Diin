@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Search, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Search, Trash2 } from 'lucide-react';
 import { ThemeProps, API_URL, authHeaders } from './shared';
 
 interface MessagesProps extends ThemeProps {
@@ -10,6 +10,7 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   const [selected, setSelected] = useState<any | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -25,21 +26,26 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   const handleSelect = async (conv: any) => {
     setSelected(conv);
     setInput('');
+    setImageFile(null);
     await loadMessages(conv.id);
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !selected) return;
+    if ((!input.trim() && !imageFile) || !selected) return;
     setSending(true);
     try {
+      const body = new FormData();
+      if (input.trim()) body.append('message', input.trim());
+      if (imageFile) body.append('image', imageFile);
+      const { 'Content-Type': _contentType, ...headers } = authHeaders();
       const r = await fetch(`${API_URL}/api/v1/messages/${selected.id}/send`, {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ message: input }),
+        method: 'POST', headers, body,
       });
       const d = await r.json();
       if (d.success) {
         setMessages(prev => [...prev, d.message]);
         setInput('');
+        setImageFile(null);
         setSelected((prev: any) => ({ ...prev, updated_at: new Date().toISOString() }));
       }
     } catch (err) { console.error(err); }
@@ -159,6 +165,7 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
                       <div className={`group relative max-w-xs px-4 py-2 rounded-lg ${msg.sender_type === 'admin' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'}`}>
                         <p className="text-xs opacity-70 mb-1">{msg.sender?.name}</p>
                         <p className="text-sm">{msg.message}</p>
+                        {msg.image_url && <a href={msg.image_url} target="_blank" rel="noreferrer" className="mt-2 block"><img src={msg.image_url} alt="Message attachment" className="max-h-64 max-w-full rounded-xl object-cover" /></a>}
                         <p className="text-xs opacity-50 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</p>
                         <button type="button" onClick={() => void handleDeleteMessage(msg.id)} title="Delete message" className="absolute -right-9 top-1/2 rounded p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600">
                           <Trash2 className="h-4 w-4" />
@@ -172,10 +179,23 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
                 {selected.status === 'active' ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">
+                      <label className="cursor-pointer rounded-lg border border-emerald-200 px-3 py-2 text-emerald-600 hover:bg-emerald-50" title="Attach image">
+                        <ImageIcon className="h-5 w-5" />
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            window.alert('Image must be 10 MB or smaller');
+                            return;
+                          }
+                          setImageFile(file);
+                          e.target.value = '';
+                        }} />
+                      </label>
                       <input type="text" value={input} onChange={e => setInput(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && handleSend()}
                         placeholder="Type your reply..." className={inputCls} />
-                      <button onClick={handleSend} disabled={!input.trim() || sending}
+                      <button onClick={handleSend} disabled={(!input.trim() && !imageFile) || sending}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-semibold">Send</button>
                     </div>
                     <button onClick={handleClose} className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold">Close Conversation</button>

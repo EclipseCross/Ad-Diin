@@ -8,9 +8,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Cloudinary\Cloudinary;
 
 class MessageController extends Controller
 {
+    protected Cloudinary $cloudinary;
+
+    public function __construct()
+    {
+        $this->cloudinary = new Cloudinary(config('cloudinary.cloud_url'));
+    }
+
     /**
      * Get all conversations for the authenticated user.
      */
@@ -140,8 +148,16 @@ class MessageController extends Controller
     public function sendMessage(Request $request, $conversationId)
     {
         $request->validate([
-            'message' => 'required|string|max:5000',
+            'message' => 'nullable|string|max:5000',
+            'image' => 'nullable|file|image|mimes:jpg,jpeg,png,webp,gif|max:10240',
         ]);
+
+        if (!$request->filled('message') && !$request->hasFile('image')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Write a message or attach an image.',
+            ], 422);
+        }
 
         $user = Auth::user();
         $conversation = Conversation::find($conversationId);
@@ -175,10 +191,23 @@ class MessageController extends Controller
             $conversation->save();
         }
 
+        $imageUrl = null;
+        $imagePublicId = null;
+        if ($request->hasFile('image')) {
+            $uploaded = $this->cloudinary->uploadApi()->upload(
+                $request->file('image')->getRealPath(),
+                ['folder' => 'ad-diin/messages', 'resource_type' => 'image']
+            );
+            $imageUrl = $uploaded['secure_url'] ?? null;
+            $imagePublicId = $uploaded['public_id'] ?? null;
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $user->id,
-            'message' => $request->message,
+            'message' => $request->input('message', ''),
+            'image_url' => $imageUrl,
+            'image_public_id' => $imagePublicId,
             'sender_type' => $user->isAdmin() ? 'admin' : 'user',
         ]);
 
@@ -310,7 +339,14 @@ class MessageController extends Controller
             ->where('conversation_id', $conversationId)
             ->update([$column => now()]);
 
-        return response()->json(['success' => (bool) $updated, 'mode' => 'me']);
+        if (!$updated) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Message was not found or was already deleted for you.',
+            ], 404);
+        }
+
+        return response()->json(['success' => true, 'mode' => 'me', 'message_id' => (int) $messageId]);
     }
 
     public function deleteMessageForEveryone($conversationId, $messageId)
