@@ -438,14 +438,18 @@ export default function MessagingPage() {
                               </span>
                             )}
                           </p>
-                          <button
-                            onClick={() => void deleteMessage(msg.id)}
-                            aria-label="Delete message"
-                            className="absolute -right-9 top-1/2 hidden -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 group-hover:block"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => void deleteMessage(msg.id)}
+                          aria-label={`Delete message from ${msg.sender?.name || 'conversation'}`}
+                          title="Delete message"
+                          className={`self-center rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600 ${
+                            msg.sender_type === 'user' ? 'order-first mr-2' : 'ml-2'
+                          }`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     ))
                   )}
