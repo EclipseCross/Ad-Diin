@@ -147,6 +147,42 @@ main {
   animation-direction: reverse;
 }
 
+.site-atmosphere::before {
+  content: '';
+  position: absolute;
+  width: min(70vw, 52rem);
+  height: min(70vw, 52rem);
+  left: 50%;
+  top: 18%;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    rgba(16, 185, 129, 0.12),
+    transparent 22%,
+    rgba(212, 175, 55, 0.08),
+    transparent 48%,
+    rgba(45, 212, 191, 0.1),
+    transparent 72%
+  );
+  filter: blur(18px);
+  opacity: 0.75;
+  animation: atmosphere-portal 20s linear infinite;
+}
+
+.site-atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 8% 12%;
+  border: 1px solid rgba(52, 211, 153, 0.08);
+  border-radius: 45% 55% 52% 48%;
+  box-shadow:
+    0 0 80px rgba(16, 185, 129, 0.08),
+    inset 0 0 80px rgba(16, 185, 129, 0.05);
+  animation: atmosphere-breathe 9s ease-in-out infinite;
+}
+
 @keyframes atmosphere-drift-one {
   0% { transform: translate3d(-4%, -2%, 0) scale(0.9); }
   100% { transform: translate3d(18%, 14%, 80px) scale(1.12); }
@@ -177,6 +213,17 @@ main {
   to { transform: translate3d(35px, 55px, 0); }
 }
 
+@keyframes atmosphere-portal {
+  from { transform: translateX(-50%) rotate(0deg) scale(0.92); }
+  50% { transform: translateX(-50%) rotate(180deg) scale(1.08); }
+  to { transform: translateX(-50%) rotate(360deg) scale(0.92); }
+}
+
+@keyframes atmosphere-breathe {
+  0%, 100% { transform: scale(0.98) rotate(-1deg); opacity: 0.5; }
+  50% { transform: scale(1.02) rotate(1deg); opacity: 1; }
+}
+
 .site-main::before,
 .site-main::after {
   content: '';
@@ -198,6 +245,46 @@ main {
 .site-main > .min-h-screen,
 .site-main > section.min-h-screen {
   background: transparent !important;
+}
+
+/* Normalize legacy light Tailwind surfaces across public routes. This keeps
+   older pages in the same dark-glass visual system as the home experience. */
+.site-main [class*="bg-white"],
+.site-main [class*="from-white"],
+.site-main [class*="to-white"] {
+  background-color: rgba(7, 24, 24, 0.78) !important;
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.site-main input[class*="bg-white"],
+.site-main textarea[class*="bg-white"],
+.site-main select[class*="bg-white"] {
+  background-color: rgba(2, 8, 23, 0.72) !important;
+  color: #f8fafc !important;
+}
+
+.site-main [class*="text-slate-900"],
+.site-main [class*="text-gray-900"],
+.site-main [class*="text-emerald-900"],
+.site-main [class*="text-emerald-800"] {
+  color: #e2e8f0 !important;
+}
+
+.site-main [class*="text-gray-700"],
+.site-main [class*="text-gray-600"],
+.site-main [class*="text-slate-700"],
+.site-main [class*="text-slate-600"] {
+  color: rgba(203, 213, 225, 0.8) !important;
+}
+
+.site-main [class*="bg-emerald-50"],
+.site-main [class*="bg-slate-50"],
+.site-main [class*="bg-gray-50"] {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: #d1fae5;
 }
 
 .site-main::before {
@@ -342,6 +429,11 @@ footer {
   .atmosphere-ring,
   .atmosphere-grid,
   .atmosphere-stars {
+    animation: none !important;
+  }
+
+  .site-atmosphere::before,
+  .site-atmosphere::after {
     animation: none !important;
   }
 }
