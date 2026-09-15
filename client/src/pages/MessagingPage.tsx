@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
 
 const API_URL = apiBaseUrl;
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 
 
 interface Message {
