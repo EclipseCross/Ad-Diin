@@ -174,6 +174,43 @@ class MessageController extends Controller
         ]);
     }
 
+    public function deleteMessage($conversationId, $messageId)
+    {
+        $user = Auth::user();
+        $conversation = Conversation::find($conversationId);
+
+        if (!$conversation) {
+            return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
+        }
+
+        if (!$this->canAccessConversation($user, $conversation)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $message = Message::where('conversation_id', $conversationId)->find($messageId);
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        if (!$user->isAdmin() && (int) $message->sender_id !== (int) $user->id) {
+            return response()->json(['success' => false, 'message' => 'You can only delete your own messages'], 403);
+        }
+
+        $message->delete();
+        $conversation->touch();
+
+        return response()->json(['success' => true, 'message_id' => (int) $messageId]);
+    }
+
+    protected function canAccessConversation($user, Conversation $conversation)
+    {
+        if ($user->isAdmin()) {
+            return !$conversation->admin_id || (int) $conversation->admin_id === (int) $user->id;
+        }
+
+        return (int) $conversation->user_id === (int) $user->id;
+    }
+
     /**
      * Close a conversation.
      */

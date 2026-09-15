@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { apiBaseUrl } from '../api';
 
 export default function ContactPage() {
   const [fullName, setFullName] = useState('');
@@ -34,9 +35,7 @@ export default function ContactPage() {
     try {
       // IMPORTANT:
       // Direct Laravel backend URL
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_ENDPOINT ||
-        'http://127.0.0.1:8000';
+      const backendUrl = apiBaseUrl;
 
       const response = await fetch(
         `${backendUrl}/api/v1/contact`,
