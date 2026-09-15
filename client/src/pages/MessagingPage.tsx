@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader, Check, CheckCheck, Trash2, Search } from 'lucide-react';
+import { MessageCircle, Phone, Mail, MapPin, Send, AlertCircle, Loader, Check, CheckCheck, Trash2, Search } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -56,7 +56,6 @@ export default function MessagingPage() {
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
   const conversationRequestInFlight = useRef(false);
   const messagesRequestInFlight = useRef(false);
   const conversationListRevision = useRef(0);
@@ -128,7 +127,8 @@ export default function MessagingPage() {
         return;
       }
 
-      setConversations(response.data.conversations || []);
+      const loadedConversations = response.data.conversations || [];
+      setConversations(loadedConversations);
       console.log('Conversations loaded:', response.data.conversations?.length || 0);
       // Load unread count
       try {
@@ -144,6 +144,12 @@ export default function MessagingPage() {
       }
       
       setLoading(false);
+
+      // Users have one support thread, like messaging a Facebook Page.
+      // Create it automatically instead of showing a "New Message" action.
+      if (!silent && loadedConversations.length === 0) {
+        await startNewConversation();
+      }
     } catch (error: any) {
       console.error('Failed to load conversations:', {
         status: error.response?.status,
@@ -273,12 +279,11 @@ export default function MessagingPage() {
     }
   };
 
-  const deleteMessage = async (messageId: number) => {
+  const deleteMessage = async (messageId: number, mode: 'me' | 'everyone') => {
     if (!selectedConversation) return;
-    const forEveryone = window.confirm('Delete this message for everyone?\n\nChoose Cancel to delete it only for you.');
-    if (!forEveryone && !window.confirm('Delete this message only for you?')) return;
+    if (!window.confirm(mode === 'everyone' ? 'Delete this message for everyone?' : 'Delete this message only for you?')) return;
     try {
-      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {}, {
+      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/delete-for-${mode}`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         timeout: 10000,
       });
@@ -286,38 +291,6 @@ export default function MessagingPage() {
       toast.success('Message deleted');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete message');
-    }
-  };
-
-  const deleteConversation = async (conversation: Conversation) => {
-    const forEveryone = window.confirm('Delete this conversation for everyone?\n\nChoose Cancel to hide it only from your account.');
-    if (!forEveryone && !window.confirm('Hide this conversation only for you?')) return;
-
-    setDeletingConversationId(conversation.id);
-    try {
-      await axios.post(`${API_URL}/api/v1/messages/${conversation.id}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {}, {
-        headers: { Authorization: `******'token')}` },
-        timeout: 10000,
-      });
-
-      conversationListRevision.current += 1;
-      // An older polling request may still be in flight. Allow an immediate
-      // refresh while its response is ignored by the revision guard above.
-      conversationRequestInFlight.current = false;
-      setConversations((items) => items.filter((item) => item.id !== conversation.id));
-      if (selectedConversation?.id === conversation.id) {
-        setSelectedConversation(null);
-        setMessages([]);
-        setMessageInput('');
-      }
-      void loadConversations(true);
-      toast.success('Conversation deleted');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to delete conversation';
-      setError(message);
-      toast.error(message);
-    } finally {
-      setDeletingConversationId(null);
     }
   };
 
@@ -374,14 +347,9 @@ export default function MessagingPage() {
             <MessageCircle className="h-10 w-10 text-emerald-600" />
             Support Center
           </h1>
-          <button
-            onClick={startNewConversation}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-gray-400"
-          >
-            <Plus className="h-5 w-5" />
-            New Message
-          </button>
+          <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+            Direct support
+          </span>
         </div>
 
         {/* Unread Count Badge */}
@@ -417,14 +385,9 @@ export default function MessagingPage() {
             
             <div className="flex-1 overflow-y-auto">
               {conversations.length === 0 ? (
-                <div className="p-4 text-center text-slate-500">
-                  <p className="text-sm">No conversations yet</p>
-                  <button
-                    onClick={startNewConversation}
-                    className="mt-2 text-emerald-600 hover:text-emerald-700 font-semibold text-sm"
-                  >
-                    Start one now
-                  </button>
+                <div className="p-6 text-center text-slate-500">
+                  <Loader className="mx-auto mb-2 h-5 w-5 animate-spin text-emerald-600" />
+                  <p className="text-sm">Opening your support thread...</p>
                 </div>
               ) : visibleConversations.length === 0 ? (
                 <div className="p-6 text-center text-sm text-slate-500">No matching conversations.</div>
@@ -461,19 +424,6 @@ export default function MessagingPage() {
                           Closed
                         </span>
                       )}
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void deleteConversation(conv);
-                        }}
-                        aria-label={`Delete conversation with ${conv.user?.name || 'support'}`}
-                        title="Delete conversation"
-                        disabled={deletingConversationId === conv.id}
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600 disabled:cursor-wait disabled:opacity-50"
-                      >
-                        {deletingConversationId === conv.id ? <Loader className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      </button>
                     </div>
                   </div>
                 ))
@@ -536,15 +486,26 @@ export default function MessagingPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => void deleteMessage(msg.id)}
-                          aria-label={`Delete message from ${msg.sender?.name || 'conversation'}`}
-                          title="Delete message"
+                          onClick={() => void deleteMessage(msg.id, 'me')}
+                          aria-label="Delete message for me"
+                          title="Delete for me"
                           className={`self-center rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600 ${
                             msg.sender_type === 'user' ? 'order-first mr-2' : 'ml-2'
                           }`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                        {msg.sender_type === 'user' && (
+                          <button
+                            type="button"
+                            onClick={() => void deleteMessage(msg.id, 'everyone')}
+                            aria-label="Delete message for everyone"
+                            title="Delete for everyone"
+                            className="self-center rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50"
+                          >
+                            Everyone
+                          </button>
+                        )}
                       </div>
                     ))
                   )}
