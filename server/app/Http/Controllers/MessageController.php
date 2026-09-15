@@ -7,6 +7,7 @@ use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MessageController extends Controller
 {
@@ -23,14 +24,18 @@ class MessageController extends Controller
                     $query->where('admin_id', $user->id)
                           ->orWhereNull('admin_id');
                 })
-                ->whereNull('deleted_for_admin_at')
+                ->when(Schema::hasColumn('conversations', 'deleted_for_admin_at'), function ($query) {
+                    return $query->whereNull('deleted_for_admin_at');
+                })
                 ->with(['user', 'lastMessage.sender'])
                 ->latest('updated_at')
                 ->get();
         } else {
             // Users see their own conversations
             $conversations = Conversation::where('user_id', $user->id)
-                ->whereNull('deleted_for_user_at')
+                ->when(Schema::hasColumn('conversations', 'deleted_for_user_at'), function ($query) {
+                    return $query->whereNull('deleted_for_user_at');
+                })
                 ->with(['admin', 'lastMessage.sender'])
                 ->latest('updated_at')
                 ->get();
@@ -101,10 +106,13 @@ class MessageController extends Controller
         }
 
         $messages = Message::where('conversation_id', $conversationId)
-            ->whereNull('deleted_for_everyone_at')
-            ->when($user->isAdmin(), function ($query) {
+            ->when(Schema::hasColumn('messages', 'deleted_for_everyone_at'), function ($query) {
+                return $query->whereNull('deleted_for_everyone_at');
+            })
+            ->when($user->isAdmin() && Schema::hasColumn('messages', 'deleted_for_admin_at'), function ($query) {
                 return $query->whereNull('deleted_for_admin_at');
-            }, function ($query) {
+            })
+            ->when(!$user->isAdmin() && Schema::hasColumn('messages', 'deleted_for_user_at'), function ($query) {
                 return $query->whereNull('deleted_for_user_at');
             })
             ->with('sender')
@@ -262,12 +270,18 @@ class MessageController extends Controller
     public function deleteConversationForMe($conversationId)
     {
         $user = Auth::user();
+        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
+        if (!Schema::hasColumn('conversations', $column)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
+            ], 409);
+        }
         $conversation = Conversation::find($conversationId);
         if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
         }
 
-        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
         DB::table('conversations')->where('id', $conversationId)->update([$column => now()]);
 
         return response()->json(['success' => true, 'mode' => 'me']);
@@ -281,12 +295,18 @@ class MessageController extends Controller
     public function deleteMessageForMe($conversationId, $messageId)
     {
         $user = Auth::user();
+        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
+        if (!Schema::hasColumn('messages', $column)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
+            ], 409);
+        }
         $conversation = Conversation::find($conversationId);
         if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
         $updated = DB::table('messages')
             ->where('id', $messageId)
             ->where('conversation_id', $conversationId)
@@ -298,6 +318,12 @@ class MessageController extends Controller
     public function deleteMessageForEveryone($conversationId, $messageId)
     {
         $user = Auth::user();
+        if (!Schema::hasColumn('messages', 'deleted_for_everyone_at')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
+            ], 409);
+        }
         $conversation = Conversation::find($conversationId);
         $message = Message::where('conversation_id', $conversationId)->find($messageId);
         if (!$conversation || !$message || !$this->canAccessConversation($user, $conversation)) {
