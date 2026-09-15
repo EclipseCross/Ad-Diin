@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader, Check, CheckCheck, Trash2, Search } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -55,6 +55,8 @@ export default function MessagingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
   const conversationRequestInFlight = useRef(false);
   const messagesRequestInFlight = useRef(false);
   const conversationListRevision = useRef(0);
@@ -101,6 +103,7 @@ export default function MessagingPage() {
 
       console.log('Fetching from:', `${API_URL}/api/v1/messages`);
       const response = await axios.get(`${API_URL}/api/v1/messages`, {
+        params: { refresh: Date.now() },
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -287,6 +290,7 @@ export default function MessagingPage() {
   const deleteConversation = async (conversation: Conversation) => {
     if (!window.confirm('Delete this entire conversation and all of its messages?')) return;
 
+    setDeletingConversationId(conversation.id);
     try {
       await axios.delete(`${API_URL}/api/v1/messages/${conversation.id}`, {
         headers: { Authorization: `******'token')}` },
@@ -306,9 +310,24 @@ export default function MessagingPage() {
       void loadConversations(true);
       toast.success('Conversation deleted');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete conversation');
+      const message = error.response?.data?.message || 'Failed to delete conversation';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setDeletingConversationId(null);
     }
   };
+
+  const visibleConversations = conversations.filter((conversation) => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      conversation.user?.name,
+      conversation.admin?.name,
+      conversation.subject,
+      conversation.lastMessage?.message,
+    ].some((value) => value?.toLowerCase().includes(query));
+  });
 
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
@@ -371,9 +390,26 @@ export default function MessagingPage() {
 
         <div className="grid gap-6 lg:grid-cols-3 min-h-[600px]">
           {/* Conversations List */}
-          <div className="rounded-2xl border border-emerald-200/80 bg-white/90 shadow-lg overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white font-bold">
-              Conversations
+          <div className="rounded-2xl border border-emerald-200/80 bg-white/95 shadow-lg overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold">Conversations</p>
+                  <p className="mt-0.5 text-xs text-emerald-100">{conversations.length} chat{conversations.length === 1 ? '' : 's'}</p>
+                </div>
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-emerald-700">{unreadCount} new</span>
+                )}
+              </div>
+              <label className="mt-3 flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm text-white ring-1 ring-white/20">
+                <Search className="h-4 w-4 shrink-0" />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search conversations"
+                  className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-emerald-100"
+                />
+              </label>
             </div>
             
             <div className="flex-1 overflow-y-auto">
@@ -387,8 +423,10 @@ export default function MessagingPage() {
                     Start one now
                   </button>
                 </div>
+              ) : visibleConversations.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-500">No matching conversations.</div>
               ) : (
-                conversations.map((conv) => (
+                visibleConversations.map((conv) => (
                   <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
@@ -428,9 +466,10 @@ export default function MessagingPage() {
                         }}
                         aria-label={`Delete conversation with ${conv.user?.name || 'support'}`}
                         title="Delete conversation"
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600"
+                        disabled={deletingConversationId === conv.id}
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600 disabled:cursor-wait disabled:opacity-50"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingConversationId === conv.id ? <Loader className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>

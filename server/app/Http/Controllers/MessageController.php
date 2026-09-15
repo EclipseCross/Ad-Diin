@@ -37,7 +37,7 @@ class MessageController extends Controller
         return response()->json([
             'success' => true,
             'conversations' => $conversations
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
     /**
@@ -225,14 +225,24 @@ class MessageController extends Controller
             ], 403);
         }
 
-        DB::transaction(function () use ($conversation) {
+        $deleted = DB::transaction(function () use ($conversation) {
+            // Delete explicitly so this works even when the existing production
+            // database was created without the cascade foreign key.
             $conversation->messages()->delete();
-            $conversation->delete();
+            return $conversation->delete();
         });
+
+        if (!$deleted || Conversation::whereKey($conversationId)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conversation could not be deleted from the database',
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
             'conversation_id' => (int) $conversationId,
+            'deleted' => true,
         ]);
     }
 
