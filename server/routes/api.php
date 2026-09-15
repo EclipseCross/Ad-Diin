@@ -14,6 +14,8 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AboutContentController;
+use App\Http\Controllers\ProductAnalyzerController;
+use App\Http\Controllers\FocusController;
 
 
 // ============================================================
@@ -38,7 +40,18 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/ai/chat',         [AIController::class, 'chat']);
     Route::post('/ai/chat/history', [AIController::class, 'chatWithHistory']);
+    Route::post('/ai/ask',          [AIController::class, 'ask'])->middleware('throttle:20,1');
+    Route::get('/ai/history',       [AIController::class, 'history']);
+    Route::get('/ai/conversations', [AIController::class, 'conversations']);
+    Route::post('/ai/new-chat',     [AIController::class, 'newChat']);
+    Route::get('/ai/health',        [AIController::class, 'health']);
     Route::get('/ai/status',        [AIController::class, 'status']);
+    Route::get('/product-analyzer/health', [ProductAnalyzerController::class, 'health']);
+    Route::post('/product-analyzer/analyze', [ProductAnalyzerController::class, 'analyze'])->middleware('throttle:10,1');
+    Route::post('/product-analyzer/analyze-text', [ProductAnalyzerController::class, 'analyzeText'])->middleware('throttle:10,1');
+    Route::get('/focus/status', [FocusController::class, 'status']);
+    Route::get('/focus/extension-config', [FocusController::class, 'extensionConfig']);
+    Route::get('/focus/extension', [FocusController::class, 'extensionConfig']);
 
 
     // --------------------------------------------------------
@@ -180,6 +193,11 @@ Route::prefix('v1')
             );
         });
 
+        Route::get('/ai/conversations', [AIController::class, 'conversations']);
+        Route::post('/ai/new-chat', [AIController::class, 'newChat']);
+        Route::delete('/ai/conversations/{id}', [AIController::class, 'deleteConversation']);
+        Route::delete('/ai/history', [AIController::class, 'deleteHistory']);
+
 
         // ====================================================
         // USER
@@ -281,6 +299,11 @@ Route::prefix('v1')
             Route::post(
                 '/{conversation_id}/send',
                 [MessageController::class, 'sendMessage']
+            );
+
+            Route::delete(
+                '/{conversation_id}/messages/{message_id}',
+                [MessageController::class, 'deleteMessage']
             );
 
             Route::patch(

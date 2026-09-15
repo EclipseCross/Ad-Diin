@@ -22,6 +22,9 @@ import EmailVerificationPage from './pages/EmailVerificationPage';
 import MyDonationsPage from './pages/MyDonationsPage';
 import AdminPanel from './admin/AdminPanel';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import ProductAnalyzerPage from './pages/ProductAnalyzerPage';
+import FocusPage from './pages/FocusPage';
+import FocusShieldPage from './pages/FocusShieldPage';
 
 // Admin route paths — Header ও Footer এখানে দেখাবে না
 const ADMIN_PATHS = ['/admin/panel', '/admin/dashboard', '/admin-dashboard'];
@@ -49,6 +52,9 @@ function Layout() {
           <Route path="/milad" element={<MiladBookingPage />} />
           <Route path="/my-milad-requests" element={<MyMiladRequestsPage />} />
           <Route path="/diin-ai" element={<DiinAIPage />} />
+          <Route path="/product-analyzer" element={<ProductAnalyzerPage />} />
+          <Route path="/focus" element={<FocusPage />} />
+          <Route path="/focus/shield" element={<FocusShieldPage />} />
 
           {/* User Routes */}
           <Route path="/my-donations" element={<MyDonationsPage />} />

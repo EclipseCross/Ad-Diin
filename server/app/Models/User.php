@@ -67,4 +67,19 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Milad::class, 'user_id');
     }
+
+    public function aiConversations(): HasMany
+    {
+        return $this->hasMany(AiConversation::class, 'user_id');
+    }
+
+    public function aiMessages(): HasMany
+    {
+        return $this->hasManyThrough(
+            AiMessage::class,
+            AiConversation::class,
+            'user_id',
+            'conversation_id'
+        );
+    }
 }

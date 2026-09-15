@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader } from 'lucide-react';
+import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader, Check, CheckCheck, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { apiBaseUrl } from '../api';
 
-const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+const API_URL = apiBaseUrl;
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 
 
 interface Message {
@@ -260,6 +263,20 @@ export default function MessagingPage() {
     }
   };
 
+  const deleteMessage = async (messageId: number) => {
+    if (!selectedConversation || !window.confirm('Delete this message?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        timeout: 10000,
+      });
+      setMessages((items) => items.filter((item) => item.id !== messageId));
+      toast.success('Message deleted');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete message');
+    }
+  };
+
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
       <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
@@ -403,7 +420,7 @@ export default function MessagingPage() {
                         className={`flex ${msg.sender_type === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                          className={`group relative max-w-xs px-4 py-2 rounded-lg ${
                             msg.sender_type === 'user'
                               ? 'bg-emerald-600 text-white rounded-br-none'
                               : 'bg-slate-200 text-slate-900 rounded-bl-none'
@@ -414,8 +431,20 @@ export default function MessagingPage() {
                           </p>
                           <p className="text-sm">{msg.message}</p>
                           <p className="text-xs opacity-50 mt-1">
-                            {new Date(msg.created_at).toLocaleTimeString()}
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                            {msg.sender_type === 'user' && (
+                              <span className="ml-2 inline-flex items-center gap-1" title={msg.is_read ? 'Seen' : 'Sent'}>
+                                {msg.is_read ? <><CheckCheck className="h-3.5 w-3.5 text-sky-300" /> Seen</> : <><Check className="h-3.5 w-3.5" /> Sent</>}
+                              </span>
+                            )}
                           </p>
+                          <button
+                            onClick={() => void deleteMessage(msg.id)}
+                            aria-label="Delete message"
+                            className="absolute -right-9 top-1/2 hidden -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 group-hover:block"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     ))

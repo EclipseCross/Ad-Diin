@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Ad-Diin Focus Shield",
+  "version": "1.0.0",
+  "description": "Blocks configured distractions while Ad-Diin Focus Shield is active.",
+  "permissions": ["tabs", "webNavigation", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*"], "js": ["sync_bridge.js"], "run_at": "document_start" }],
+  "action": { "default_title": "Ad-Diin Focus Shield" }
+}

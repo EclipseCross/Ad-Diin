@@ -18,17 +18,17 @@ body {
 }
 
 header {
-  padding: 1em;
+  padding: 0;
 }
 
 main {
   flex: 1;
-  padding: 1em;
+  padding: 0;
 }
 
 footer {
-  padding: 1em;
-  text-align: center;
+  padding: 0;
+  text-align: left;
 }
 
 @media (min-width: 576px) {
@@ -41,5 +41,251 @@ footer {
   .navbar-mx {
     padding-left: 300px;
     padding-right: 300px;
+  }
+}
+
+/* ── Homepage Animations ────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-20px); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes spin-slow-reverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); opacity: 1; }
+  70%  { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+
+.animate-float         { animation: float 6s ease-in-out infinite; }
+.animate-spin-slow     { animation: spin-slow 20s linear infinite; }
+.animate-spin-slow-rev { animation: spin-slow-reverse 25s linear infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+}
+.animate-pulse-ring    { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+.animate-reveal-up     { animation: reveal-up 0.7s ease forwards; }
+.animate-fade-in       { animation: fade-in 0.5s ease forwards; }
+.animate-star-twinkle  { animation: star-twinkle 3s ease-in-out infinite; }
+
+.section-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.section-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.glass-gold {
+  background: rgba(212,175,55,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212,175,55,0.2);
+}
+
+/* Gradient text */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #d4af37 0%, #f4d76a 50%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-emerald {
+  background: linear-gradient(135deg, #34d399 0%, #6ee7b7 50%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-spin-slow,
+  .animate-spin-slow-rev,
+  .animate-shimmer,
+  .animate-pulse-ring,
+  .animate-reveal-up,
+  .animate-fade-in,
+  .animate-star-twinkle,
+  .section-reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Immersive Home Additions ────────────────────────────── */
+
+@keyframes morph-blob {
+  0%, 100% { border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%; }
+  33%       { border-radius: 40% 60% 30% 70% / 60% 40% 60% 40%; }
+  66%       { border-radius: 70% 30% 50% 50% / 40% 70% 30% 60%; }
+}
+@keyframes particle-drift {
+  0%   { transform: translateY(0px)   translateX(0px)   opacity(0.4); }
+  50%  { transform: translateY(-30px) translateX(15px)  opacity(1);   }
+  100% { transform: translateY(0px)   translateX(0px)   opacity(0.4); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 0.9; transform: scale(1.08); }
+}
+@keyframes text-reveal {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to   { clip-path: inset(0 0% 0 0);   opacity: 1; }
+}
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(60px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes orbit {
+  from { transform: rotate(0deg)   translateX(120px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+}
+@keyframes orbit-rev {
+  from { transform: rotate(0deg)   translateX(80px) rotate(0deg); }
+  to   { transform: rotate(-360deg) translateX(80px) rotate(360deg); }
+}
+@keyframes crescent-float {
+  0%, 100% { transform: translateY(0) rotate(-15deg); }
+  50%       { transform: translateY(-18px) rotate(-10deg); }
+}
+@keyframes dome-glow {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(212,175,55,0.3)); }
+  50%       { filter: drop-shadow(0 0 28px rgba(212,175,55,0.7)); }
+}
+@keyframes counter-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes section-bg-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes line-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.animate-morph-blob     { animation: morph-blob 8s ease-in-out infinite; }
+.animate-particle-drift { animation: particle-drift 6s ease-in-out infinite; }
+.animate-glow-pulse     { animation: glow-pulse 3s ease-in-out infinite; }
+.animate-slide-up-fade  { animation: slide-up-fade 0.8s ease forwards; }
+.animate-orbit          { animation: orbit 12s linear infinite; }
+.animate-orbit-rev      { animation: orbit-rev 18s linear infinite; }
+.animate-crescent       { animation: crescent-float 5s ease-in-out infinite; }
+.animate-dome-glow      { animation: dome-glow 3s ease-in-out infinite; }
+.animate-counter-up     { animation: counter-up 0.6s ease forwards; }
+.animate-line-grow      { animation: line-grow 0.8s ease forwards; }
+
+/* Scene section — parallax-ready wrapper */
+.scene-section {
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+/* Depth layer — moves slower on scroll (set via JS transform) */
+.depth-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Immersive card */
+.immersive-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.immersive-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  border-color: rgba(212,175,55,0.25);
+}
+
+/* Gold divider line */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  transform-origin: left;
+}
+
+/* Scene transition fade between sections */
+.scene-fade-bottom {
+  pointer-events: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, transparent, #071509);
+}
+.scene-fade-top {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to top, transparent, #071509);
+}
+
+/* Reduced motion — immersive additions */
+@media (prefers-reduced-motion: reduce) {
+  .animate-morph-blob,
+  .animate-particle-drift,
+  .animate-glow-pulse,
+  .animate-slide-up-fade,
+  .animate-orbit,
+  .animate-orbit-rev,
+  .animate-crescent,
+  .animate-dome-glow,
+  .animate-counter-up,
+  .animate-line-grow,
+  .immersive-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
