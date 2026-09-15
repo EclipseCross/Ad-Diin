@@ -271,15 +271,14 @@ class MessageController extends Controller
     {
         $user = Auth::user();
         $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
-        if (!Schema::hasColumn('conversations', $column)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
-            ], 409);
-        }
+        $hasPersonalDeletion = Schema::hasColumn('conversations', $column);
         $conversation = Conversation::find($conversationId);
         if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
+        }
+
+        if (!$hasPersonalDeletion) {
+            return $this->deleteConversation($conversationId);
         }
 
         DB::table('conversations')->where('id', $conversationId)->update([$column => now()]);
@@ -296,15 +295,14 @@ class MessageController extends Controller
     {
         $user = Auth::user();
         $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
-        if (!Schema::hasColumn('messages', $column)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
-            ], 409);
-        }
+        $hasPersonalDeletion = Schema::hasColumn('messages', $column);
         $conversation = Conversation::find($conversationId);
         if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if (!$hasPersonalDeletion) {
+            return $this->deleteMessage($conversationId, $messageId);
         }
 
         $updated = DB::table('messages')
@@ -318,12 +316,6 @@ class MessageController extends Controller
     public function deleteMessageForEveryone($conversationId, $messageId)
     {
         $user = Auth::user();
-        if (!Schema::hasColumn('messages', 'deleted_for_everyone_at')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Messaging deletion migration is not installed. Run php artisan migrate on the Laravel server.',
-            ], 409);
-        }
         $conversation = Conversation::find($conversationId);
         $message = Message::where('conversation_id', $conversationId)->find($messageId);
         if (!$conversation || !$message || !$this->canAccessConversation($user, $conversation)) {
@@ -331,6 +323,10 @@ class MessageController extends Controller
         }
         if (!$user->isAdmin() && (int) $message->sender_id !== (int) $user->id) {
             return response()->json(['success' => false, 'message' => 'You can only delete your own messages'], 403);
+        }
+
+        if (!Schema::hasColumn('messages', 'deleted_for_everyone_at')) {
+            return $this->deleteMessage($conversationId, $messageId);
         }
 
         DB::table('messages')->where('id', $messageId)->update(['deleted_for_everyone_at' => now()]);
