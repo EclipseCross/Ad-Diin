@@ -224,6 +224,15 @@ main {
   50% { transform: scale(1.02) rotate(1deg); opacity: 1; }
 }
 
+@keyframes analyzer-scan {
+  0%, 100% { transform: translateY(-5rem); opacity: 0.35; }
+  50% { transform: translateY(5rem); opacity: 1; }
+}
+
+.analyzer-scan-line {
+  animation: analyzer-scan 2.2s ease-in-out infinite;
+}
+
 .site-main::before,
 .site-main::after {
   content: '';
@@ -282,9 +291,23 @@ main {
 
 .site-main [class*="bg-emerald-50"],
 .site-main [class*="bg-slate-50"],
-.site-main [class*="bg-gray-50"] {
+.site-main [class*="bg-gray-50"],
+.site-main [class*="-50"],
+.site-main [class*="-100"] {
   background-color: rgba(16, 185, 129, 0.08) !important;
   color: #d1fae5;
+}
+
+.site-main [class*="text-"][class*="-900"],
+.site-main [class*="text-"][class*="-800"],
+.site-main [class*="text-"][class*="-700"] {
+  color: #e2e8f0 !important;
+}
+
+.site-main [class*="bg-gradient-to-b"][class*="from-"],
+.site-main [class*="bg-gradient-to-br"][class*="from-"],
+.site-main [class*="bg-gradient-to-r"][class*="from-"] {
+  background-image: linear-gradient(135deg, rgba(6, 34, 29, 0.95), rgba(2, 8, 23, 0.92)) !important;
 }
 
 .site-main::before {

@@ -28,6 +28,8 @@ export default function ProductAnalyzerPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState('Checking');
+  const [processingStep, setProcessingStep] = useState(0);
+  const processingSteps = ['Preparing label', 'Scanning image', 'Reading ingredients', 'Checking halal rules', 'Building result'];
 
   useEffect(() => {
     apiRequest<{ connected?: boolean }>('/api/v1/product-analyzer/health')
@@ -53,6 +55,10 @@ export default function ProductAnalyzerPage() {
     if (mode === 'image' && !file) return setError('Please select an ingredient label image.');
     if (mode === 'text' && text.trim().length < 3) return setError('Please enter a meaningful ingredient list.');
     setLoading(true);
+    setProcessingStep(0);
+    const stepTimer = window.setInterval(() => {
+      setProcessingStep(step => Math.min(step + 1, processingSteps.length - 1));
+    }, 1200);
     try {
       const options: RequestInit = { method: 'POST' };
       if (mode === 'image') {
@@ -66,6 +72,7 @@ export default function ProductAnalyzerPage() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Analysis service unavailable.');
     } finally {
+      window.clearInterval(stepTimer);
       setLoading(false);
     }
   };
@@ -122,7 +129,20 @@ export default function ProductAnalyzerPage() {
           </div>
           <div className="rounded-3xl bg-slate-900 p-6 text-slate-100 shadow-sm">
             {!result && !loading && <div className="flex min-h-80 items-center justify-center text-center text-slate-400"><div><p className="text-5xl">🧾</p><p className="mt-3">Your result, explanation, OCR text, and evidence appear here.</p></div></div>}
-            {loading && <div className="flex min-h-80 items-center justify-center"><p className="animate-pulse text-emerald-300">Reading label and checking ingredients…</p></div>}
+            {loading && (
+              <div className="relative flex min-h-80 items-center justify-center overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-950/30">
+                {preview && <img src={preview} alt="" className="absolute inset-8 h-[calc(100%-4rem)] w-[calc(100%-4rem)] rounded-xl object-contain opacity-20 grayscale" />}
+                <div className="analyzer-scan-line absolute left-6 right-6 top-1/2 z-10 h-0.5 bg-emerald-300 shadow-[0_0_18px_6px_rgba(52,211,153,0.7)]" />
+                <div className="relative z-20 w-full max-w-sm rounded-2xl border border-emerald-300/20 bg-slate-950/75 p-5 text-center backdrop-blur-xl">
+                  <div className="mx-auto mb-4 h-12 w-12 rounded-full border-2 border-emerald-400/30 border-t-emerald-300 animate-spin" />
+                  <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-300">Analyzer working</p>
+                  <p className="mt-2 text-lg font-semibold text-white">{processingSteps[processingStep]}…</p>
+                  <div className="mt-4 flex gap-1.5">
+                    {processingSteps.map((step, index) => <span key={step} className={`h-1.5 flex-1 rounded-full ${index <= processingStep ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]' : 'bg-white/10'}`} />)}
+                  </div>
+                </div>
+              </div>
+            )}
             {result && !loading && <div className="space-y-5"><div><p className="text-xs uppercase tracking-widest text-emerald-300">Result</p><h2 className="mt-1 text-3xl font-black">{label}</h2><p className="mt-2 text-slate-300">{result.explanation || result.reason || 'No explanation was returned.'}</p></div>{result.ocr?.text && <details open><summary className="cursor-pointer font-bold text-emerald-300">Extracted ingredient text</summary><p className="mt-2 whitespace-pre-wrap rounded-xl bg-white/5 p-3 text-sm text-slate-300">{result.ocr.text}</p></details>}{evidence.length > 0 && <div><h3 className="font-bold text-emerald-300">Detected evidence</h3><div className="mt-2 space-y-2">{evidence.map((item, index) => <div key={`${item.ingredient || item.name}-${index}`} className="rounded-xl bg-white/5 p-3 text-sm"><strong>{item.ingredient || item.name}</strong><p className="text-slate-300">{item.description || item.reason}</p><small className="text-slate-400">{item.ocr_ingredient || item.reference}</small></div>)}</div></div>}<p className="border-t border-white/10 pt-4 text-xs text-slate-400">This automated screening is not official Halal certification. Verify doubtful ingredients with a qualified certification body.</p></div>}
           </div>
         </div>
