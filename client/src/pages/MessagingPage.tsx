@@ -57,6 +57,7 @@ export default function MessagingPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const conversationRequestInFlight = useRef(false);
   const messagesRequestInFlight = useRef(false);
+  const conversationListRevision = useRef(0);
 
   // Load conversations
   useEffect(() => {
@@ -80,6 +81,7 @@ export default function MessagingPage() {
     }
 
     conversationRequestInFlight.current = true;
+    const requestRevision = conversationListRevision.current;
 
     try {
       if (!silent) {
@@ -115,6 +117,11 @@ export default function MessagingPage() {
         if (String(errorMsg).toLowerCase().includes('unauthenticated')) {
           navigate('/user-login', { state: { from: '/messaging' } });
         }
+        return;
+      }
+
+      // Ignore a response from a poll that started before a conversation was deleted.
+      if (requestRevision !== conversationListRevision.current) {
         return;
       }
 
@@ -286,12 +293,17 @@ export default function MessagingPage() {
         timeout: 10000,
       });
 
+      conversationListRevision.current += 1;
+      // An older polling request may still be in flight. Allow an immediate
+      // refresh while its response is ignored by the revision guard above.
+      conversationRequestInFlight.current = false;
       setConversations((items) => items.filter((item) => item.id !== conversation.id));
       if (selectedConversation?.id === conversation.id) {
         setSelectedConversation(null);
         setMessages([]);
         setMessageInput('');
       }
+      void loadConversations(true);
       toast.success('Conversation deleted');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete conversation');
