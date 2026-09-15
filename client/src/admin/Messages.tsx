@@ -51,17 +51,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
     finally { setSending(false); }
   };
 
-  const handleClose = async () => {
-    if (!selected) return;
-    try {
-      const r = await fetch(`${API_URL}/api/v1/messages/${selected.id}/close`, {
-        method: 'PATCH', headers: authHeaders(),
-      });
-      const d = await r.json();
-      if (d.success) setSelected((prev: any) => ({ ...prev, status: 'closed' }));
-    } catch (err) { console.error(err); }
-  };
-
   const handleDeleteConversation = async (conversation: any) => {
     const forEveryone = window.confirm('Delete this conversation for everyone?\n\nChoose Cancel to hide it only from your admin inbox.');
     if (!forEveryone && !window.confirm('Hide this conversation only for your admin account?')) return;
@@ -192,7 +181,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
                       <button onClick={handleSend} disabled={(!input.trim() && !imageFile) || sending}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm font-semibold">Send</button>
                     </div>
-                    <button onClick={handleClose} className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold">Close Conversation</button>
                   </div>
                 ) : (
                   <p className="text-center text-sm text-red-600 font-semibold">This conversation is closed</p>
