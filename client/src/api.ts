@@ -2,10 +2,16 @@ import axios, { AxiosInstance } from 'axios';
 import { secrets } from './secrets';
 import toast from 'react-hot-toast';
 
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const legacyBackendEndpoint = (import.meta.env.VITE_BACKEND_ENDPOINT || '').trim();
+
+// Production deployments serve the React app and Laravel API from the same host.
+// Only an explicit API base URL may override that behavior.
 export const apiBaseUrl = (
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_BACKEND_ENDPOINT ||
-  (import.meta.env.DEV ? 'http://localhost:8000' : '')
+  configuredApiBaseUrl ||
+  (import.meta.env.DEV
+    ? legacyBackendEndpoint || 'http://localhost:8000'
+    : '')
 ).replace(/\/$/, '');
 
 console.log('🌐 API Base URL:', apiBaseUrl);
