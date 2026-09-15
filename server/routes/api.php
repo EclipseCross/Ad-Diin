@@ -307,7 +307,7 @@ Route::prefix('v1')
             );
 
             Route::delete(
-                '/{conversation_id}',
+                '/{conversation_id}/delete',
                 [MessageController::class, 'deleteConversation']
             );
 

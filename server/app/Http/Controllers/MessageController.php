@@ -225,11 +225,16 @@ class MessageController extends Controller
             ], 403);
         }
 
-        $deleted = DB::transaction(function () use ($conversation) {
-            // Delete explicitly so this works even when the existing production
-            // database was created without the cascade foreign key.
-            $conversation->messages()->delete();
-            return $conversation->delete();
+        $deleted = DB::transaction(function () use ($conversationId) {
+            // Use query-builder deletes so this works with the existing
+            // manually-created messaging tables and no cascade constraint.
+            DB::table('messages')
+                ->where('conversation_id', $conversationId)
+                ->delete();
+
+            return DB::table('conversations')
+                ->where('id', $conversationId)
+                ->delete();
         });
 
         if (!$deleted || Conversation::whereKey($conversationId)->exists()) {

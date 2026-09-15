@@ -292,7 +292,7 @@ export default function MessagingPage() {
 
     setDeletingConversationId(conversation.id);
     try {
-      await axios.delete(`${API_URL}/api/v1/messages/${conversation.id}`, {
+      await axios.delete(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {
         headers: { Authorization: `******'token')}` },
         timeout: 10000,
       });
