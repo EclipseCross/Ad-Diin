@@ -37,6 +37,18 @@ function Layout() {
     <div className="min-h-screen flex flex-col">
       {!isAdminRoute && <Header />}
       <main className="site-main flex-1">
+        {!isAdminRoute && (
+          <div className="site-atmosphere" aria-hidden="true">
+            <span className="atmosphere-orb atmosphere-orb-one" />
+            <span className="atmosphere-orb atmosphere-orb-two" />
+            <span className="atmosphere-orb atmosphere-orb-three" />
+            <span className="atmosphere-ring atmosphere-ring-one" />
+            <span className="atmosphere-ring atmosphere-ring-two" />
+            <span className="atmosphere-grid" />
+            <span className="atmosphere-stars atmosphere-stars-one" />
+            <span className="atmosphere-stars atmosphere-stars-two" />
+          </div>
+        )}
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
