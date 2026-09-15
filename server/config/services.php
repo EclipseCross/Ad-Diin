@@ -30,4 +30,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'ai' => [
+        'url' => env('DIIN_AI_BACKEND_URL', env('AI_SERVICE_URL')),
+        'timeout' => env('DIIN_AI_TIMEOUT', 30),
+    ],
+
+    'halal_detector' => [
+        'url' => env('HALAL_DETECTOR_BACKEND_URL'),
+        'timeout' => env('HALAL_DETECTOR_TIMEOUT', 30),
+    ],
+
 ];

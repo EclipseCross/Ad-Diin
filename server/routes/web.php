@@ -24,3 +24,6 @@ Route::view('/ramadan-dashboard', 'ramadan-dashboard');
 // })->where('any', '.*');
 
 require __DIR__ . '/auth.php';
+
+Route::get('/focus', [\App\Http\Controllers\FocusController::class, 'index']);
+Route::get('/focus/shield', [\App\Http\Controllers\FocusController::class, 'shield']);

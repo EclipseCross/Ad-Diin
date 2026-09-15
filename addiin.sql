@@ -307,7 +307,41 @@ CREATE TABLE IF NOT EXISTS activities (
 );
 
 select * from activities;
+USE addiin;
 
+CREATE TABLE IF NOT EXISTS `diin_ai_conversations` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `title` VARCHAR(255) NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX `idx_diin_ai_conversations_user_id` (`user_id`),
+    INDEX `idx_diin_ai_conversations_active` (`user_id`, `is_active`),
+
+    CONSTRAINT `fk_diin_ai_conversations_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+CREATE TABLE IF NOT EXISTS `diin_ai_messages` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `conversation_id` BIGINT UNSIGNED NOT NULL,
+    `role` ENUM('user', 'assistant') NOT NULL,
+    `content` LONGTEXT NOT NULL,
+    `sources` JSON NULL,
+    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX `idx_diin_ai_messages_conversation_id` (`conversation_id`),
+
+    CONSTRAINT `fk_diin_ai_messages_conversation`
+        FOREIGN KEY (`conversation_id`)
+        REFERENCES `diin_ai_conversations`(`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 
 
