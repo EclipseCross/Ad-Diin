@@ -127,6 +127,18 @@ export default function MessagingPage() {
 
       const loadedConversations = response.data.conversations || [];
       console.log('Conversations loaded:', response.data.conversations?.length || 0);
+
+      // Open the user's existing support thread automatically. Without this,
+      // the page stays on the empty state even though the API returned a chat.
+      if (loadedConversations.length > 0) {
+        setSelectedConversation((current) => {
+          const currentConversation = current
+            ? loadedConversations.find((conversation: Conversation) => conversation.id === current.id)
+            : null;
+          return currentConversation || loadedConversations[0];
+        });
+      }
+
       // Load unread count
       try {
         const unreadRes = await axios.get(`${API_URL}/api/v1/messages/unread`, {
