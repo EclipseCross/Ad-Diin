@@ -54,6 +54,13 @@ main {
   z-index: 1;
 }
 
+/* Page roots must not paint a second opaque canvas over the home visual
+   language. Content cards remain intentionally opaque for readability. */
+.site-main > .min-h-screen,
+.site-main > section.min-h-screen {
+  background: transparent !important;
+}
+
 .site-main::before {
   width: 22rem;
   height: 22rem;
