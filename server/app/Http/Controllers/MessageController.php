@@ -191,6 +191,13 @@ class MessageController extends Controller
             ], 403);
         }
 
+        // Support is a permanent chat thread; legacy closed statuses must not
+        // prevent either participant from continuing the conversation.
+        if ($conversation->status !== 'active') {
+            $conversation->status = 'active';
+            $conversation->save();
+        }
+
         // If admin is responding for the first time, auto-assign
         if ($user->isAdmin() && !$conversation->admin_id) {
             $conversation->admin_id = $user->id;

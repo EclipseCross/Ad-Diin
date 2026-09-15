@@ -129,7 +129,10 @@ export default function MessagingPage() {
         return;
       }
 
-      const loadedConversations = response.data.conversations || [];
+      const loadedConversations = (response.data.conversations || []).map((conversation: Conversation) => ({
+        ...conversation,
+        status: 'active' as const,
+      }));
       console.log('Conversations loaded:', response.data.conversations?.length || 0);
 
       // Open the user's existing support thread automatically. Without this,
@@ -389,13 +392,6 @@ export default function MessagingPage() {
                       {selectedConversation.admin?.name || 'Support Team'}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    selectedConversation.status === 'active' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {selectedConversation.status}
-                  </span>
                 </div>
 
                 {/* Messages */}
@@ -441,8 +437,7 @@ export default function MessagingPage() {
                 </div>
 
                 {/* Input */}
-                {selectedConversation.status === 'active' && (
-                  <div className="border-t border-emerald-200 p-4 bg-white">
+                <div className="border-t border-emerald-200 p-4 bg-white">
                     {imageFile && (
                       <div className="mb-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                         <span className="truncate">{imageFile.name}</span>
@@ -496,14 +491,7 @@ export default function MessagingPage() {
                         <Send className="h-5 w-5" />
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {selectedConversation.status === 'closed' && (
-                  <div className="border-t border-red-200 bg-red-50 p-4 text-center text-sm text-red-700 font-semibold">
-                    This conversation has been closed
-                  </div>
-                )}
+                </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400">
