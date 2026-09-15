@@ -276,7 +276,7 @@ export default function MessagingPage() {
   const deleteMessage = async (messageId: number) => {
     if (!selectedConversation || !window.confirm('Delete this message?')) return;
     try {
-      await axios.delete(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}`, {
+      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/delete`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         timeout: 10000,
       });
@@ -292,7 +292,7 @@ export default function MessagingPage() {
 
     setDeletingConversationId(conversation.id);
     try {
-      await axios.delete(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {
+      await axios.post(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {}, {
         headers: { Authorization: `******'token')}` },
         timeout: 10000,
       });

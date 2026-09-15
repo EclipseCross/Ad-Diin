@@ -305,8 +305,16 @@ Route::prefix('v1')
                 '/{conversation_id}/messages/{message_id}',
                 [MessageController::class, 'deleteMessage']
             );
+            Route::post(
+                '/{conversation_id}/messages/{message_id}/delete',
+                [MessageController::class, 'deleteMessage']
+            );
 
             Route::delete(
+                '/{conversation_id}/delete',
+                [MessageController::class, 'deleteConversation']
+            );
+            Route::post(
                 '/{conversation_id}/delete',
                 [MessageController::class, 'deleteConversation']
             );

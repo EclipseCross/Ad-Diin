@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import { Loader2, Search, Trash2 } from 'lucide-react';
 import { ThemeProps, API_URL, authHeaders } from './shared';
 
 interface MessagesProps extends ThemeProps {
   conversations: any[];
 }
 
-export default function Messages({ card, text, bdr, inputCls, conversations }: MessagesProps) {
+export default function Messages({ card, text, sub, bdr, inputCls, conversations }: MessagesProps) {
   const [selected, setSelected] = useState<any | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadMessages = async (conversationId: number) => {
     try {
@@ -54,9 +57,56 @@ export default function Messages({ card, text, bdr, inputCls, conversations }: M
     } catch (err) { console.error(err); }
   };
 
+  const handleDeleteConversation = async (conversation: any) => {
+    if (!window.confirm('Delete this conversation and all of its messages?')) return;
+    setDeletingId(conversation.id);
+    try {
+      const r = await fetch(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {
+        method: 'POST', headers: authHeaders(),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.message || 'Delete failed');
+      setSelected((current: any) => current?.id === conversation.id ? null : current);
+      setMessages([]);
+      window.location.reload();
+    } catch (err: any) {
+      window.alert(err.message || 'Could not delete conversation');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: number) => {
+    if (!selected || !window.confirm('Delete this message?')) return;
+    try {
+      const r = await fetch(`${API_URL}/api/v1/messages/${selected.id}/messages/${messageId}/delete`, {
+        method: 'POST', headers: authHeaders(),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.message || 'Delete failed');
+      setMessages((items) => items.filter((item) => item.id !== messageId));
+    } catch (err: any) {
+      window.alert(err.message || 'Could not delete message');
+    }
+  };
+
+  const filteredConversations = conversations.filter((conv) => {
+    const query = search.trim().toLowerCase();
+    return !query || `${conv.user?.name || ''} ${conv.user?.email || ''}`.toLowerCase().includes(query);
+  });
+
   return (
     <div className={`${card} rounded-xl shadow-sm p-6 w-full max-w-6xl`}>
-      <h3 className={`text-xl font-semibold mb-6 ${text}`}>User Messages</h3>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className={`text-xl font-semibold ${text}`}>Live support inbox</h3>
+          <p className={`mt-1 text-sm ${sub}`}>Reply, mark conversations closed, or remove old chats.</p>
+        </div>
+        <label className={`flex items-center gap-2 rounded-lg border ${bdr} px-3 py-2`}>
+          <Search className={`h-4 w-4 ${sub}`} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users" className={`w-44 bg-transparent text-sm outline-none ${text}`} />
+        </label>
+      </div>
       <div className="grid gap-6 lg:grid-cols-3 min-h-[500px]">
         {/* Conversation List */}
         <div className={`${card} rounded-lg border ${bdr} overflow-hidden flex flex-col`}>
@@ -65,13 +115,18 @@ export default function Messages({ card, text, bdr, inputCls, conversations }: M
             {conversations.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-500">No conversations</div>
             ) : (
-              conversations.map(conv => (
-                <button key={conv.id} onClick={() => handleSelect(conv)}
-                  className={`w-full p-4 border-b ${bdr} text-left transition ${selected?.id === conv.id ? 'bg-emerald-50 border-l-4 border-l-emerald-600' : 'hover:bg-gray-50'}`}>
-                  <p className={`font-semibold text-sm ${text}`}>{conv.user?.name || 'User'}</p>
-                  <p className="text-xs text-gray-500 truncate">{conv.user?.email}</p>
-                  <p className="text-xs text-gray-600 mt-1 truncate">{conv.lastMessage?.message || 'No messages'}</p>
-                </button>
+              filteredConversations.map(conv => (
+                <div key={conv.id} className={`flex items-center gap-2 border-b ${bdr} ${selected?.id === conv.id ? 'bg-emerald-50/10 border-l-4 border-l-emerald-500' : ''}`}>
+                  <button onClick={() => handleSelect(conv)}
+                    className="min-w-0 flex-1 p-4 text-left transition hover:bg-emerald-50/10">
+                    <p className={`font-semibold text-sm ${text}`}>{conv.user?.name || 'User'}</p>
+                    <p className={`truncate text-xs ${sub}`}>{conv.user?.email}</p>
+                    <p className={`mt-1 truncate text-xs ${sub}`}>{conv.lastMessage?.message || 'No messages'}</p>
+                  </button>
+                  <button type="button" onClick={() => void handleDeleteConversation(conv)} disabled={deletingId === conv.id} title="Delete conversation" className={`mr-2 rounded-lg p-2 ${sub} hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50`}>
+                    {deletingId === conv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -98,10 +153,13 @@ export default function Messages({ card, text, bdr, inputCls, conversations }: M
                 ) : (
                   messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-xs px-4 py-2 rounded-lg ${msg.sender_type === 'admin' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'}`}>
+                      <div className={`group relative max-w-xs px-4 py-2 rounded-lg ${msg.sender_type === 'admin' ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'}`}>
                         <p className="text-xs opacity-70 mb-1">{msg.sender?.name}</p>
                         <p className="text-sm">{msg.message}</p>
                         <p className="text-xs opacity-50 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</p>
+                        <button type="button" onClick={() => void handleDeleteMessage(msg.id)} title="Delete message" className="absolute -right-9 top-1/2 rounded p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   ))
