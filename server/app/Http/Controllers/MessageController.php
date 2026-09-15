@@ -159,6 +159,13 @@ class MessageController extends Controller
             ], 422);
         }
 
+        if ($request->hasFile('image') && !Schema::hasColumn('messages', 'image_url')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image messaging is not enabled on the server yet. Run the latest database migration.',
+            ], 503);
+        }
+
         $user = Auth::user();
         $conversation = Conversation::find($conversationId);
 
@@ -202,14 +209,23 @@ class MessageController extends Controller
             $imagePublicId = $uploaded['public_id'] ?? null;
         }
 
-        $message = Message::create([
+        $messageData = [
             'conversation_id' => $conversation->id,
             'sender_id' => $user->id,
             'message' => $request->input('message', ''),
-            'image_url' => $imageUrl,
-            'image_public_id' => $imagePublicId,
             'sender_type' => $user->isAdmin() ? 'admin' : 'user',
-        ]);
+        ];
+
+        // Keep text messaging compatible with production databases until the
+        // attachment migration has been applied.
+        if (Schema::hasColumn('messages', 'image_url')) {
+            $messageData['image_url'] = $imageUrl;
+        }
+        if (Schema::hasColumn('messages', 'image_public_id')) {
+            $messageData['image_public_id'] = $imagePublicId;
+        }
+
+        $message = Message::create($messageData);
 
         $message->load('sender');
         $conversation->touch(); // Update conversation's updated_at
