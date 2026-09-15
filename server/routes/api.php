@@ -306,6 +306,11 @@ Route::prefix('v1')
                 [MessageController::class, 'deleteMessage']
             );
 
+            Route::delete(
+                '/{conversation_id}',
+                [MessageController::class, 'deleteConversation']
+            );
+
             Route::patch(
                 '/{conversation_id}/close',
                 [MessageController::class, 'closeConversation']

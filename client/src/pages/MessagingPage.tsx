@@ -277,6 +277,27 @@ export default function MessagingPage() {
     }
   };
 
+  const deleteConversation = async (conversation: Conversation) => {
+    if (!window.confirm('Delete this entire conversation and all of its messages?')) return;
+
+    try {
+      await axios.delete(`${API_URL}/api/v1/messages/${conversation.id}`, {
+        headers: { Authorization: `******'token')}` },
+        timeout: 10000,
+      });
+
+      setConversations((items) => items.filter((item) => item.id !== conversation.id));
+      if (selectedConversation?.id === conversation.id) {
+        setSelectedConversation(null);
+        setMessages([]);
+        setMessageInput('');
+      }
+      toast.success('Conversation deleted');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete conversation');
+    }
+  };
+
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
       <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
@@ -356,16 +377,24 @@ export default function MessagingPage() {
                 </div>
               ) : (
                 conversations.map((conv) => (
-                  <button
+                  <div
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedConversation(conv);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={`w-full p-4 border-b border-emerald-100/50 text-left transition ${
                       selectedConversation?.id === conv.id
                         ? 'bg-emerald-50 border-l-4 border-l-emerald-600'
                         : 'hover:bg-emerald-50/50'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
                       <div className="flex-1">
                         <p className="font-semibold text-slate-900 text-sm">
                           {conv.user?.name || 'User'}
@@ -379,8 +408,20 @@ export default function MessagingPage() {
                           Closed
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void deleteConversation(conv);
+                        }}
+                        aria-label={`Delete conversation with ${conv.user?.name || 'support'}`}
+                        title="Delete conversation"
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>

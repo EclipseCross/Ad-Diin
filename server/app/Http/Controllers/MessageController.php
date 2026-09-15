@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MessageController extends Controller
 {
@@ -200,6 +201,39 @@ class MessageController extends Controller
         $conversation->touch();
 
         return response()->json(['success' => true, 'message_id' => (int) $messageId]);
+    }
+
+    /**
+     * Delete a conversation and all of its messages for an authorized user.
+     */
+    public function deleteConversation($conversationId)
+    {
+        $user = Auth::user();
+        $conversation = Conversation::find($conversationId);
+
+        if (!$conversation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conversation not found',
+            ], 404);
+        }
+
+        if (!$this->canAccessConversation($user, $conversation)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        DB::transaction(function () use ($conversation) {
+            $conversation->messages()->delete();
+            $conversation->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'conversation_id' => (int) $conversationId,
+        ]);
     }
 
     protected function canAccessConversation($user, Conversation $conversation)
