@@ -36,7 +36,7 @@ function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
       {!isAdminRoute && <Header />}
-      <main className="flex-1">
+      <main className="site-main flex-1">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />

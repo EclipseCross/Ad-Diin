@@ -26,6 +26,50 @@ main {
   padding: 0;
 }
 
+/* Shared visual stage for all non-home routes. Individual pages can layer
+   their own cards and content over this same immersive backdrop. */
+.site-main {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(5, 150, 105, 0.2), transparent 28rem),
+    radial-gradient(circle at 88% 18%, rgba(212, 175, 55, 0.1), transparent 24rem),
+    linear-gradient(135deg, #020b0a 0%, #061b18 48%, #020817 100%);
+}
+
+.site-main::before,
+.site-main::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.45;
+}
+
+.site-main > * {
+  position: relative;
+  z-index: 1;
+}
+
+.site-main::before {
+  width: 22rem;
+  height: 22rem;
+  left: -9rem;
+  top: 18rem;
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.site-main::after {
+  width: 26rem;
+  height: 26rem;
+  right: -11rem;
+  bottom: 8rem;
+  background: rgba(30, 64, 175, 0.2);
+}
+
 footer {
   padding: 0;
   text-align: left;
