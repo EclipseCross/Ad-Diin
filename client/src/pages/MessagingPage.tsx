@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, MapPin, Send, AlertCircle, Loader, Check, CheckCheck, Trash2, Search } from 'lucide-react';
+import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -48,14 +48,12 @@ interface Conversation {
 
 export default function MessagingPage() {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
   const conversationRequestInFlight = useRef(false);
   const messagesRequestInFlight = useRef(false);
   const conversationListRevision = useRef(0);
@@ -128,7 +126,6 @@ export default function MessagingPage() {
       }
 
       const loadedConversations = response.data.conversations || [];
-      setConversations(loadedConversations);
       console.log('Conversations loaded:', response.data.conversations?.length || 0);
       // Load unread count
       try {
@@ -294,17 +291,6 @@ export default function MessagingPage() {
     }
   };
 
-  const visibleConversations = conversations.filter((conversation) => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return true;
-    return [
-      conversation.user?.name,
-      conversation.admin?.name,
-      conversation.subject,
-      conversation.lastMessage?.message,
-    ].some((value) => value?.toLowerCase().includes(query));
-  });
-
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
       <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl" />
@@ -359,80 +345,9 @@ export default function MessagingPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3 min-h-[600px]">
-          {/* Conversations List */}
-          <div className="rounded-2xl border border-emerald-200/80 bg-white/95 shadow-lg overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold">Conversations</p>
-                  <p className="mt-0.5 text-xs text-emerald-100">{conversations.length} chat{conversations.length === 1 ? '' : 's'}</p>
-                </div>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-emerald-700">{unreadCount} new</span>
-                )}
-              </div>
-              <label className="mt-3 flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm text-white ring-1 ring-white/20">
-                <Search className="h-4 w-4 shrink-0" />
-                <input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search conversations"
-                  className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-emerald-100"
-                />
-              </label>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {conversations.length === 0 ? (
-                <div className="p-6 text-center text-slate-500">
-                  <Loader className="mx-auto mb-2 h-5 w-5 animate-spin text-emerald-600" />
-                  <p className="text-sm">Opening your support thread...</p>
-                </div>
-              ) : visibleConversations.length === 0 ? (
-                <div className="p-6 text-center text-sm text-slate-500">No matching conversations.</div>
-              ) : (
-                visibleConversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setSelectedConversation(conv);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    className={`w-full p-4 border-b border-emerald-100/50 text-left transition ${
-                      selectedConversation?.id === conv.id
-                        ? 'bg-emerald-50 border-l-4 border-l-emerald-600'
-                        : 'hover:bg-emerald-50/50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-900 text-sm">
-                          {conv.user?.name || 'User'}
-                        </p>
-                        <p className="text-xs text-slate-500 truncate">
-                          {conv.lastMessage?.message || 'No messages yet'}
-                        </p>
-                      </div>
-                      {conv.status === 'closed' && (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                          Closed
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Chat Window */}
-          <div className="lg:col-span-2 rounded-2xl border border-emerald-200/80 bg-white/90 shadow-lg overflow-hidden flex flex-col">
+        <div className="min-h-[680px]">
+          {/* Single Facebook-Page-style support thread */}
+          <div className="rounded-3xl border border-emerald-200/80 bg-white/95 shadow-xl overflow-hidden flex min-h-[680px] flex-col">
             {selectedConversation ? (
               <>
                 {/* Header */}
@@ -552,24 +467,6 @@ export default function MessagingPage() {
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <Mail className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Email</p>
-            <p className="text-sm text-slate-600">info@ad-diin.org</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <Phone className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Phone</p>
-            <p className="text-sm text-slate-600">+880 1234 567890</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <MapPin className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Location</p>
-            <p className="text-sm text-slate-600">Dhaka, Bangladesh</p>
-          </div>
-        </div>
           </>
         )}
       </div>
