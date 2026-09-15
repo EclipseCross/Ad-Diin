@@ -309,6 +309,8 @@ Route::prefix('v1')
                 '/{conversation_id}/messages/{message_id}/delete',
                 [MessageController::class, 'deleteMessage']
             );
+            Route::post('/{conversation_id}/messages/{message_id}/delete-for-me', [MessageController::class, 'deleteMessageForMe']);
+            Route::post('/{conversation_id}/messages/{message_id}/delete-for-everyone', [MessageController::class, 'deleteMessageForEveryone']);
 
             Route::delete(
                 '/{conversation_id}/delete',
@@ -318,6 +320,8 @@ Route::prefix('v1')
                 '/{conversation_id}/delete',
                 [MessageController::class, 'deleteConversation']
             );
+            Route::post('/{conversation_id}/delete-for-me', [MessageController::class, 'deleteConversationForMe']);
+            Route::post('/{conversation_id}/delete-for-everyone', [MessageController::class, 'deleteConversationForEveryone']);
 
             Route::patch(
                 '/{conversation_id}/close',

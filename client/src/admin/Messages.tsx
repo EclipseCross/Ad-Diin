@@ -58,10 +58,11 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   };
 
   const handleDeleteConversation = async (conversation: any) => {
-    if (!window.confirm('Delete this conversation and all of its messages?')) return;
+    const forEveryone = window.confirm('Delete this conversation for everyone?\n\nChoose Cancel to hide it only from your admin inbox.');
+    if (!forEveryone && !window.confirm('Hide this conversation only for your admin account?')) return;
     setDeletingId(conversation.id);
     try {
-      const r = await fetch(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {
+      const r = await fetch(`${API_URL}/api/v1/messages/${conversation.id}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {
         method: 'POST', headers: authHeaders(),
       });
       const d = await r.json();
@@ -77,9 +78,11 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   };
 
   const handleDeleteMessage = async (messageId: number) => {
-    if (!selected || !window.confirm('Delete this message?')) return;
+    if (!selected) return;
+    const forEveryone = window.confirm('Delete this message for everyone?\n\nChoose Cancel to delete it only for your admin account.');
+    if (!forEveryone && !window.confirm('Delete this message only for your admin account?')) return;
     try {
-      const r = await fetch(`${API_URL}/api/v1/messages/${selected.id}/messages/${messageId}/delete`, {
+      const r = await fetch(`${API_URL}/api/v1/messages/${selected.id}/messages/${messageId}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {
         method: 'POST', headers: authHeaders(),
       });
       const d = await r.json();

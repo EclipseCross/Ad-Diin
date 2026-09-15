@@ -274,9 +274,11 @@ export default function MessagingPage() {
   };
 
   const deleteMessage = async (messageId: number) => {
-    if (!selectedConversation || !window.confirm('Delete this message?')) return;
+    if (!selectedConversation) return;
+    const forEveryone = window.confirm('Delete this message for everyone?\n\nChoose Cancel to delete it only for you.');
+    if (!forEveryone && !window.confirm('Delete this message only for you?')) return;
     try {
-      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/delete`, {}, {
+      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         timeout: 10000,
       });
@@ -288,11 +290,12 @@ export default function MessagingPage() {
   };
 
   const deleteConversation = async (conversation: Conversation) => {
-    if (!window.confirm('Delete this entire conversation and all of its messages?')) return;
+    const forEveryone = window.confirm('Delete this conversation for everyone?\n\nChoose Cancel to hide it only from your account.');
+    if (!forEveryone && !window.confirm('Hide this conversation only for you?')) return;
 
     setDeletingConversationId(conversation.id);
     try {
-      await axios.post(`${API_URL}/api/v1/messages/${conversation.id}/delete`, {}, {
+      await axios.post(`${API_URL}/api/v1/messages/${conversation.id}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {}, {
         headers: { Authorization: `******'token')}` },
         timeout: 10000,
       });

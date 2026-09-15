@@ -23,12 +23,14 @@ class MessageController extends Controller
                     $query->where('admin_id', $user->id)
                           ->orWhereNull('admin_id');
                 })
+                ->whereNull('deleted_for_admin_at')
                 ->with(['user', 'lastMessage.sender'])
                 ->latest('updated_at')
                 ->get();
         } else {
             // Users see their own conversations
             $conversations = Conversation::where('user_id', $user->id)
+                ->whereNull('deleted_for_user_at')
                 ->with(['admin', 'lastMessage.sender'])
                 ->latest('updated_at')
                 ->get();
@@ -99,6 +101,12 @@ class MessageController extends Controller
         }
 
         $messages = Message::where('conversation_id', $conversationId)
+            ->whereNull('deleted_for_everyone_at')
+            ->when($user->isAdmin(), function ($query) {
+                return $query->whereNull('deleted_for_admin_at');
+            }, function ($query) {
+                return $query->whereNull('deleted_for_user_at');
+            })
             ->with('sender')
             ->latest()
             ->get()
@@ -249,6 +257,58 @@ class MessageController extends Controller
             'conversation_id' => (int) $conversationId,
             'deleted' => true,
         ]);
+    }
+
+    public function deleteConversationForMe($conversationId)
+    {
+        $user = Auth::user();
+        $conversation = Conversation::find($conversationId);
+        if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
+            return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
+        }
+
+        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
+        DB::table('conversations')->where('id', $conversationId)->update([$column => now()]);
+
+        return response()->json(['success' => true, 'mode' => 'me']);
+    }
+
+    public function deleteConversationForEveryone($conversationId)
+    {
+        return $this->deleteConversation($conversationId);
+    }
+
+    public function deleteMessageForMe($conversationId, $messageId)
+    {
+        $user = Auth::user();
+        $conversation = Conversation::find($conversationId);
+        if (!$conversation || !$this->canAccessConversation($user, $conversation)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $column = $user->isAdmin() ? 'deleted_for_admin_at' : 'deleted_for_user_at';
+        $updated = DB::table('messages')
+            ->where('id', $messageId)
+            ->where('conversation_id', $conversationId)
+            ->update([$column => now()]);
+
+        return response()->json(['success' => (bool) $updated, 'mode' => 'me']);
+    }
+
+    public function deleteMessageForEveryone($conversationId, $messageId)
+    {
+        $user = Auth::user();
+        $conversation = Conversation::find($conversationId);
+        $message = Message::where('conversation_id', $conversationId)->find($messageId);
+        if (!$conversation || !$message || !$this->canAccessConversation($user, $conversation)) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+        if (!$user->isAdmin() && (int) $message->sender_id !== (int) $user->id) {
+            return response()->json(['success' => false, 'message' => 'You can only delete your own messages'], 403);
+        }
+
+        DB::table('messages')->where('id', $messageId)->update(['deleted_for_everyone_at' => now()]);
+        return response()->json(['success' => true, 'mode' => 'everyone']);
     }
 
     protected function canAccessConversation($user, Conversation $conversation)
