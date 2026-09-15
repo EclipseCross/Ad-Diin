@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, MapPin, Send, Plus, AlertCircle, Loader, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Image as ImageIcon, Smile } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -15,6 +15,7 @@ interface Message {
   conversation_id: number;
   sender_id: number;
   message: string;
+  image_url?: string | null;
   sender_type: 'user' | 'admin';
   is_read: boolean;
   created_at: string;
@@ -48,15 +49,18 @@ interface Conversation {
 
 export default function MessagingPage() {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [showStickers, setShowStickers] = useState(false);
+  const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const conversationRequestInFlight = useRef(false);
   const messagesRequestInFlight = useRef(false);
+  const conversationListRevision = useRef(0);
 
   // Load conversations
   useEffect(() => {
@@ -80,6 +84,7 @@ export default function MessagingPage() {
     }
 
     conversationRequestInFlight.current = true;
+    const requestRevision = conversationListRevision.current;
 
     try {
       if (!silent) {
@@ -99,6 +104,7 @@ export default function MessagingPage() {
 
       console.log('Fetching from:', `${API_URL}/api/v1/messages`);
       const response = await axios.get(`${API_URL}/api/v1/messages`, {
+        params: { refresh: Date.now() },
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -118,8 +124,28 @@ export default function MessagingPage() {
         return;
       }
 
-      setConversations(response.data.conversations || []);
+      // Ignore a response from a poll that started before a conversation was deleted.
+      if (requestRevision !== conversationListRevision.current) {
+        return;
+      }
+
+      const loadedConversations = (response.data.conversations || []).map((conversation: Conversation) => ({
+        ...conversation,
+        status: 'active' as const,
+      }));
       console.log('Conversations loaded:', response.data.conversations?.length || 0);
+
+      // Open the user's existing support thread automatically. Without this,
+      // the page stays on the empty state even though the API returned a chat.
+      if (loadedConversations.length > 0) {
+        setSelectedConversation((current) => {
+          const currentConversation = current
+            ? loadedConversations.find((conversation: Conversation) => conversation.id === current.id)
+            : null;
+          return currentConversation || loadedConversations[0];
+        });
+      }
+
       // Load unread count
       try {
         const unreadRes = await axios.get(`${API_URL}/api/v1/messages/unread`, {
@@ -134,6 +160,12 @@ export default function MessagingPage() {
       }
       
       setLoading(false);
+
+      // Users have one support thread, like messaging a Facebook Page.
+      // Create it automatically instead of showing a "New Message" action.
+      if (!silent && loadedConversations.length === 0) {
+        await startNewConversation();
+      }
     } catch (error: any) {
       console.error('Failed to load conversations:', {
         status: error.response?.status,
@@ -240,33 +272,47 @@ export default function MessagingPage() {
   };
 
   const sendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation) return;
+    if ((!messageInput.trim() && !imageFile) || !selectedConversation || sending) return;
 
     try {
+      setSending(true);
       setError(null);
       const token = localStorage.getItem('token');
+      const formData = new FormData();
+      if (messageInput.trim()) formData.append('message', messageInput.trim());
+      if (imageFile) formData.append('image', imageFile);
       const response = await axios.post(
         `${API_URL}/api/v1/messages/${selectedConversation.id}/send`,
-        { message: messageInput },
+        formData,
         { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
       );
       
       if (response.data.success) {
-        setMessages([...messages, response.data.message]);
+        setMessages((items) => [...items, response.data.message]);
         setMessageInput('');
+        setImageFile(null);
         loadConversations(true);
       }
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Failed to send message';
       setError(errorMsg);
       toast.error('Error: ' + errorMsg);
+    } finally {
+      setSending(false);
     }
   };
 
-  const deleteMessage = async (messageId: number) => {
-    if (!selectedConversation || !window.confirm('Delete this message?')) return;
+  const addSticker = (sticker: string) => {
+    setMessageInput((value) => `${value}${sticker}`);
+    setShowStickers(false);
+  };
+
+  /* message deletion is intentionally unavailable in the support UI */
+  const deleteMessage = async (messageId: number, mode: 'me' | 'everyone') => {
+    if (!selectedConversation) return;
+    if (!window.confirm(mode === 'everyone' ? 'Delete this message for everyone?' : 'Delete this message only for you?')) return;
     try {
-      await axios.delete(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}`, {
+      await axios.post(`${API_URL}/api/v1/messages/${selectedConversation.id}/messages/${messageId}/delete-for-${mode}`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         timeout: 10000,
       });
@@ -276,6 +322,8 @@ export default function MessagingPage() {
       toast.error(error.response?.data?.message || 'Failed to delete message');
     }
   };
+
+  void deleteMessage;
 
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
@@ -319,14 +367,9 @@ export default function MessagingPage() {
             <MessageCircle className="h-10 w-10 text-emerald-600" />
             Support Center
           </h1>
-          <button
-            onClick={startNewConversation}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:bg-gray-400"
-          >
-            <Plus className="h-5 w-5" />
-            New Message
-          </button>
+          <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+            Direct support
+          </span>
         </div>
 
         {/* Unread Count Badge */}
@@ -336,58 +379,9 @@ export default function MessagingPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3 min-h-[600px]">
-          {/* Conversations List */}
-          <div className="rounded-2xl border border-emerald-200/80 bg-white/90 shadow-lg overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white font-bold">
-              Conversations
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {conversations.length === 0 ? (
-                <div className="p-4 text-center text-slate-500">
-                  <p className="text-sm">No conversations yet</p>
-                  <button
-                    onClick={startNewConversation}
-                    className="mt-2 text-emerald-600 hover:text-emerald-700 font-semibold text-sm"
-                  >
-                    Start one now
-                  </button>
-                </div>
-              ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
-                    className={`w-full p-4 border-b border-emerald-100/50 text-left transition ${
-                      selectedConversation?.id === conv.id
-                        ? 'bg-emerald-50 border-l-4 border-l-emerald-600'
-                        : 'hover:bg-emerald-50/50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-900 text-sm">
-                          {conv.user?.name || 'User'}
-                        </p>
-                        <p className="text-xs text-slate-500 truncate">
-                          {conv.lastMessage?.message || 'No messages yet'}
-                        </p>
-                      </div>
-                      {conv.status === 'closed' && (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                          Closed
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Chat Window */}
-          <div className="lg:col-span-2 rounded-2xl border border-emerald-200/80 bg-white/90 shadow-lg overflow-hidden flex flex-col">
+        <div className="min-h-[680px]">
+          {/* Single Facebook-Page-style support thread */}
+          <div className="rounded-3xl border border-emerald-200/80 bg-white/95 shadow-xl overflow-hidden flex min-h-[680px] flex-col">
             {selectedConversation ? (
               <>
                 {/* Header */}
@@ -398,13 +392,6 @@ export default function MessagingPage() {
                       {selectedConversation.admin?.name || 'Support Team'}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    selectedConversation.status === 'active' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {selectedConversation.status}
-                  </span>
                 </div>
 
                 {/* Messages */}
@@ -430,6 +417,11 @@ export default function MessagingPage() {
                             {msg.sender?.name}
                           </p>
                           <p className="text-sm">{msg.message}</p>
+                          {msg.image_url && (
+                            <a href={msg.image_url} target="_blank" rel="noreferrer" className="mt-2 block">
+                              <img src={msg.image_url} alt="Message attachment" className="max-h-64 max-w-full rounded-xl object-cover" />
+                            </a>
+                          )}
                           <p className="text-xs opacity-50 mt-1">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                             {msg.sender_type === 'user' && (
@@ -438,13 +430,6 @@ export default function MessagingPage() {
                               </span>
                             )}
                           </p>
-                          <button
-                            onClick={() => void deleteMessage(msg.id)}
-                            aria-label="Delete message"
-                            className="absolute -right-9 top-1/2 hidden -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600 group-hover:block"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
                         </div>
                       </div>
                     ))
@@ -452,33 +437,61 @@ export default function MessagingPage() {
                 </div>
 
                 {/* Input */}
-                {selectedConversation.status === 'active' && (
-                  <div className="border-t border-emerald-200 p-4 bg-white">
-                    <div className="flex gap-2">
+                <div className="border-t border-emerald-200 p-4 bg-white">
+                    {imageFile && (
+                      <div className="mb-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                        <span className="truncate">{imageFile.name}</span>
+                        <button type="button" onClick={() => setImageFile(null)} className="ml-3 font-semibold hover:text-red-600">Remove</button>
+                      </div>
+                    )}
+                    {showStickers && (
+                      <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                        {['👍', '❤️', '😂', '😊', '🤲', '🕌', '✨', '🎉'].map((sticker) => (
+                          <button key={sticker} type="button" onClick={() => addSticker(sticker)} className="rounded-lg bg-white px-3 py-2 text-xl shadow-sm hover:bg-emerald-100">
+                            {sticker}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer rounded-lg p-2 text-emerald-600 hover:bg-emerald-50" title="Attach image">
+                        <ImageIcon className="h-5 w-5" />
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('Image must be 10 MB or smaller');
+                            return;
+                          }
+                          setImageFile(file);
+                          event.target.value = '';
+                        }} />
+                      </label>
+                      <button type="button" onClick={() => setShowStickers((value) => !value)} className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-50" title="Stickers and emoji">
+                        <Smile className="h-5 w-5" />
+                      </button>
                       <input
                         type="text"
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            void sendMessage();
+                          }
+                        }}
                         placeholder="Type your message..."
                         className="flex-1 rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                       />
                       <button
                         onClick={sendMessage}
-                        disabled={!messageInput.trim()}
+                        disabled={(!messageInput.trim() && !imageFile) || sending}
                         className="rounded-lg bg-emerald-600 p-2 text-white hover:bg-emerald-700 disabled:bg-gray-400"
                       >
                         <Send className="h-5 w-5" />
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {selectedConversation.status === 'closed' && (
-                  <div className="border-t border-red-200 bg-red-50 p-4 text-center text-sm text-red-700 font-semibold">
-                    This conversation has been closed
-                  </div>
-                )}
+                </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400">
@@ -492,24 +505,6 @@ export default function MessagingPage() {
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <Mail className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Email</p>
-            <p className="text-sm text-slate-600">info@ad-diin.org</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <Phone className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Phone</p>
-            <p className="text-sm text-slate-600">+880 1234 567890</p>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-center">
-            <MapPin className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-900">Location</p>
-            <p className="text-sm text-slate-600">Dhaka, Bangladesh</p>
-          </div>
-        </div>
           </>
         )}
       </div>

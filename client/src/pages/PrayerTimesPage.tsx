@@ -109,11 +109,11 @@ export default function PrayerTimesPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto p-6">
+        <div className="max-w-5xl mx-auto p-6 text-slate-100">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-emerald-900 mb-2">সময়সূচী - আযান ও জামাত</h1>
-                <p className="text-gray-600">Prayer Times - AdDiin (Dhaka)</p>
+                <h1 className="text-3xl font-bold text-emerald-300 mb-2">সময়সূচী - আযান ও জামাত</h1>
+                <p className="text-slate-400">Prayer Times - AdDiin (Dhaka)</p>
             </div>
 
             {/* Tab Navigation */}
@@ -123,7 +123,7 @@ export default function PrayerTimesPage() {
                     className={`px-4 py-2 font-medium transition-colors ${
                         activeTab === 'fard' 
                         ? 'text-emerald-600 border-b-2 border-emerald-600' 
-                        : 'text-gray-600 hover:text-emerald-600'
+                        : 'text-slate-400 hover:text-emerald-300'
                     }`}
                 >
                     ফরজ (Fard) {fardAzan.length > 0 && `(${fardAzan.length})`}
@@ -133,7 +133,7 @@ export default function PrayerTimesPage() {
                     className={`px-4 py-2 font-medium transition-colors ${
                         activeTab === 'nafl' 
                         ? 'text-emerald-600 border-b-2 border-emerald-600' 
-                        : 'text-gray-600 hover:text-emerald-600'
+                        : 'text-slate-400 hover:text-emerald-300'
                     }`}
                 >
                     নফল (Nafl) {naflPrayers.length > 0 && `(${naflPrayers.length})`}
@@ -146,24 +146,24 @@ export default function PrayerTimesPage() {
                     {/* Azan Times Section */}
                     {fardAzan.length > 0 && (
                         <div>
-                            <h2 className="text-xl font-semibold text-emerald-800 mb-3">আযানের সময়</h2>
-                            <div className="bg-white rounded-lg shadow overflow-hidden">
+                            <h2 className="text-xl font-semibold text-emerald-300 mb-3">আযানের সময়</h2>
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-xl backdrop-blur-xl">
                                 {fardAzan.map((prayer, index) => (
                                     <div 
                                         key={prayer.id}
                                         className={`flex justify-between items-center p-4 ${
-                                            index !== fardAzan.length - 1 ? 'border-b' : ''
-                                        } hover:bg-emerald-50 transition-colors`}
+                                            index !== fardAzan.length - 1 ? 'border-b border-white/10' : ''
+                                        } hover:bg-emerald-400/10 transition-colors`}
                                     >
                                         <div>
-                                            <span className="font-semibold text-emerald-900">
+                                            <span className="font-semibold text-emerald-200">
                                                 {prayer.name_en}
                                             </span>
-                                            <span className="text-sm text-gray-600 ml-2">
+                                            <span className="ml-2 text-sm text-slate-400">
                                                 {prayer.name_bn}
                                             </span>
                                         </div>
-                                        <span className="text-xl font-bold text-emerald-800">
+                                        <span className="text-xl font-bold text-emerald-300">
                                             {prayer.time}
                                         </span>
                                     </div>
@@ -175,24 +175,24 @@ export default function PrayerTimesPage() {
                     {/* Jamaat Times Section */}
                     {fardJamaat.length > 0 && (
                         <div>
-                            <h2 className="text-xl font-semibold text-emerald-800 mb-3">জামাতের সময়</h2>
-                            <div className="bg-white rounded-lg shadow overflow-hidden">
+                            <h2 className="text-xl font-semibold text-emerald-300 mb-3">জামাতের সময়</h2>
+                            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-xl backdrop-blur-xl">
                                 {fardJamaat.map((prayer, index) => (
                                     <div 
                                         key={prayer.id}
                                         className={`flex justify-between items-center p-4 ${
-                                            index !== fardJamaat.length - 1 ? 'border-b' : ''
-                                        } hover:bg-emerald-50 transition-colors`}
+                                            index !== fardJamaat.length - 1 ? 'border-b border-white/10' : ''
+                                        } hover:bg-emerald-400/10 transition-colors`}
                                     >
                                         <div>
-                                            <span className="font-semibold text-emerald-900">
+                                            <span className="font-semibold text-emerald-200">
                                                 {prayer.name_en}
                                             </span>
-                                            <span className="text-sm text-gray-600 ml-2">
+                                            <span className="ml-2 text-sm text-slate-400">
                                                 {prayer.name_bn}
                                             </span>
                                         </div>
-                                        <span className="text-xl font-bold text-emerald-800">
+                                        <span className="text-xl font-bold text-emerald-300">
                                             {prayer.time}
                                         </span>
                                     </div>
@@ -206,24 +206,24 @@ export default function PrayerTimesPage() {
             {/* Nafl Prayers Tab */}
             {activeTab === 'nafl' && naflPrayers.length > 0 && (
                 <div>
-                    <h2 className="text-xl font-semibold text-emerald-800 mb-3">নফল ইবাদতের সময়</h2>
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <h2 className="text-xl font-semibold text-emerald-300 mb-3">নফল ইবাদতের সময়</h2>
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-xl backdrop-blur-xl">
                         {naflPrayers.map((prayer, index) => (
                             <div 
                                 key={prayer.id}
                                 className={`flex justify-between items-center p-4 ${
-                                    index !== naflPrayers.length - 1 ? 'border-b' : ''
-                                } hover:bg-emerald-50 transition-colors`}
+                                    index !== naflPrayers.length - 1 ? 'border-b border-white/10' : ''
+                                } hover:bg-emerald-400/10 transition-colors`}
                             >
                                 <div>
-                                    <span className="font-semibold text-emerald-900">
+                                    <span className="font-semibold text-emerald-200">
                                         {prayer.name_en}
                                     </span>
-                                    <span className="text-sm text-gray-600 ml-2">
+                                    <span className="ml-2 text-sm text-slate-400">
                                         {prayer.name_bn}
                                     </span>
                                 </div>
-                                <span className="text-xl font-bold text-emerald-800">
+                                <span className="text-xl font-bold text-emerald-300">
                                     {prayer.time}
                                 </span>
                             </div>
@@ -233,8 +233,8 @@ export default function PrayerTimesPage() {
             )}
 
             {/* Footer Note */}
-            <div className="mt-6 p-4 bg-emerald-50 rounded-lg">
-                <p className="text-sm text-gray-600">
+            <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                <p className="text-sm text-emerald-100/75">
                     <span className="font-semibold">নোট:</span> 
                     {' '}সময় পরিবর্তন সাপেক্ষে। রমজান মাসে সময়সূচী পরিবর্তন হতে পারে।
                 </p>

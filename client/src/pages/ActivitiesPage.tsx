@@ -44,7 +44,7 @@ export default function ActivitiesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen text-slate-100">
       {/* Hero */}
       <div className="bg-emerald-700 py-16 px-6 text-center text-white">
         <h1 className="text-4xl font-bold mb-3">আমাদের কার্যক্রম</h1>
@@ -69,7 +69,7 @@ export default function ActivitiesPage() {
               <div
                 key={activity.id}
                 onClick={() => handleActivityClick(activity.id)}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
+                className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-xl backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:border-emerald-400/40 hover:shadow-emerald-900/30 cursor-pointer"
               >
                 {/* Small Image - Thumbnail */}
                 {activity.image_url ? (
@@ -98,13 +98,13 @@ export default function ActivitiesPage() {
                       {categoryLabels[activity.category] || activity.category}
                     </span>
                   )}
-                  <h2 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                  <h2 className="mb-2 line-clamp-2 text-lg font-bold text-white">
                     {activity.title}
                   </h2>
                   {/* বিবরণ এখানে দেখানো হবে না - শুধু ডিটেইলস পেজে */}
                   
                   {/* Read More Link */}
-                  <div className="mt-3 text-emerald-600 text-sm font-medium flex items-center gap-1">
+                  <div className="mt-3 flex items-center gap-1 text-sm font-medium text-emerald-300">
                     বিস্তারিত পড়ুন
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

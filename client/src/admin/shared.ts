@@ -1,4 +1,6 @@
-export const API_URL = import.meta.env.VITE_BACKEND_ENDPOINT || 'http://127.0.0.1:8000';
+import { apiBaseUrl } from '../api';
+
+export const API_URL = apiBaseUrl;
 
 export function authHeaders() {
   const token = localStorage.getItem('token');

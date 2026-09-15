@@ -784,7 +784,7 @@ export function SectionProductAnalyzer() {
           </RevealUp>
 
           <RevealUp visible={visible} delay={300}>
-            <GlassCTA onClick={() => navigate('/diin-ai')} variant="emerald">
+            <GlassCTA onClick={() => navigate('/product-analyzer')} variant="emerald">
               <ShieldCheck className="w-4 h-4" /> Analyze a Product
             </GlassCTA>
           </RevealUp>
