@@ -12,6 +12,7 @@ type Message = {
   content: string;
   sources?: Source[];
   timestamp?: string;
+  created_at?: string;
 };
 
 type Conversation = {
@@ -47,6 +48,7 @@ export default function DiinAIPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -274,56 +276,101 @@ export default function DiinAIPage() {
     }
   };
 
-  return (
-    <section className="min-h-screen bg-emerald-50 px-4 py-6">
-      <div className="mx-auto flex max-w-6xl flex-col overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-xl lg:flex-row">
+  const deleteConversation = async (id: number) => {
+    if (!window.confirm('এই কথোপকথনটি মুছে ফেলবেন?')) return;
+    setDeleting(true);
+    try {
+      await apiRequest(`/api/v1/ai/conversations/${id}`, { method: 'DELETE' });
+      setConversations((items) => items.filter((item) => item.id !== id));
+      if (conversationId === id) {
+        setConversationId(null);
+        setMessages([welcome]);
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'কথোপকথন মুছতে ব্যর্থ হয়েছে।');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-        <aside className="border-b border-emerald-100 p-4 lg:w-64 lg:border-b-0 lg:border-r">
+  const deleteHistory = async () => {
+    if (!window.confirm('আপনার সম্পূর্ণ Diin AI history মুছে ফেলবেন? এই কাজটি ফিরিয়ে আনা যাবে না।')) return;
+    setDeleting(true);
+    try {
+      if (authenticated) {
+        await apiRequest('/api/v1/ai/history', { method: 'DELETE' });
+        setConversations([]);
+      } else {
+        localStorage.removeItem(guestKey);
+      }
+      setConversationId(null);
+      setMessages([welcome]);
+      setError('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'History মুছতে ব্যর্থ হয়েছে।');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const formatTime = (value?: string) => value
+    ? new Intl.DateTimeFormat('bn-BD', { hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+    : '';
+
+  return (
+    <section className="min-h-screen bg-[radial-gradient(circle_at_top,#d1fae5,transparent_40%),#f8fafc] px-3 py-5 md:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl lg:flex-row">
+
+        <aside className="border-b border-slate-200 bg-slate-950 p-5 text-white lg:w-72 lg:border-b-0 lg:border-r">
 
           <button
             onClick={newChat}
-            className="w-full rounded-xl bg-emerald-600 px-3 py-2 font-bold text-white"
+            className="w-full rounded-xl bg-emerald-500 px-3 py-3 font-bold text-slate-950 transition hover:bg-emerald-400"
           >
-            + New chat
+            + নতুন কথোপকথন
           </button>
 
           {authenticated && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-6">
+              <div className="mb-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span>আপনার কথোপকথন</span>
+                <span>{conversations.length}</span>
+              </div>
+              <div className="space-y-2">
               {conversations.map((item) => (
-                <button
+                <div
                   key={item.id}
-                  onClick={() =>
-                    void openConversation(item.id)
-                  }
-                  className={`w-full rounded-xl p-3 text-left text-sm ${
+                  className={`flex items-center gap-2 rounded-xl p-2 ${
                     item.id === conversationId
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'text-slate-300 hover:bg-white/10'
                   }`}
                 >
-                  {item.title || 'New chat'}
-                </button>
+                  <button onClick={() => void openConversation(item.id)} className="min-w-0 flex-1 truncate px-1 text-left text-sm">
+                    {item.title || 'New chat'}
+                  </button>
+                  <button disabled={deleting} onClick={() => void deleteConversation(item.id)} aria-label="Delete conversation" className="rounded-lg px-2 py-1 text-slate-500 hover:bg-red-500/20 hover:text-red-300">×</button>
+                </div>
               ))}
+              </div>
             </div>
           )}
 
-          <p className="mt-5 text-xs text-slate-500">
+          <button disabled={deleting} onClick={() => void deleteHistory()} className="mt-8 w-full rounded-xl border border-red-400/30 px-3 py-2 text-left text-xs font-bold text-red-300 hover:bg-red-500/10 disabled:opacity-50">
+            🗑 সব history মুছুন
+          </button>
+          <p className="mt-5 text-xs leading-5 text-slate-500">
             {authenticated
-              ? 'Saved to your account'
-              : 'Guest history is saved in this browser'}
+              ? 'আপনার account-এ নিরাপদে সংরক্ষিত'
+              : 'এই browser-এ guest history সংরক্ষিত'}
           </p>
         </aside>
 
         <div className="flex min-h-[75vh] flex-1 flex-col">
 
-          <header className="bg-emerald-700 p-5 text-white">
-            <h1 className="text-2xl font-black">
-              Diin AI
-            </h1>
-
-            <p className="text-sm text-emerald-100">
-              Bengali-friendly Islamic learning assistant
-            </p>
+          <header className="flex items-center justify-between bg-gradient-to-r from-emerald-700 to-teal-700 p-5 text-white">
+            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-200">Ad-Diin assistant</p><h1 className="mt-1 text-2xl font-black">Diin AI</h1><p className="text-sm text-emerald-100">বাংলাভাষী ইসলামিক জ্ঞান সহকারী</p></div>
+            <span className="hidden rounded-full bg-white/15 px-3 py-1 text-xs sm:inline">{authenticated ? 'Account history' : 'Guest mode'}</span>
           </header>
 
           <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-7">
@@ -350,6 +397,7 @@ export default function DiinAIPage() {
                       ''
                     )}
                   </p>
+                  {(message.timestamp || message.created_at) && <time className={`mt-2 block text-[11px] ${message.role === 'user' ? 'text-emerald-100' : 'text-slate-400'}`}>{formatTime(message.timestamp || message.created_at)}</time>}
 
                   {message.content.includes(
                     '[CONTACT_ADMIN:/contact]'

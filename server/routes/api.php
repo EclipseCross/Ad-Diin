@@ -195,6 +195,8 @@ Route::prefix('v1')
 
         Route::get('/ai/conversations', [AIController::class, 'conversations']);
         Route::post('/ai/new-chat', [AIController::class, 'newChat']);
+        Route::delete('/ai/conversations/{id}', [AIController::class, 'deleteConversation']);
+        Route::delete('/ai/history', [AIController::class, 'deleteHistory']);
 
 
         // ====================================================

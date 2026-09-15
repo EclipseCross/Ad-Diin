@@ -150,6 +150,31 @@ class AIController extends Controller
         return response()->json(['success' => true, 'conversation' => $conversation], 201);
     }
 
+    public function deleteConversation($id)
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Authentication required.'], 401);
+        }
+
+        $conversation = AiConversation::where('user_id', $user->id)->findOrFail($id);
+        $conversation->delete();
+
+        return response()->json(['success' => true, 'conversation_id' => (int) $id]);
+    }
+
+    public function deleteHistory()
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Authentication required.'], 401);
+        }
+
+        $deleted = AiConversation::where('user_id', $user->id)->delete();
+
+        return response()->json(['success' => true, 'deleted_conversations' => $deleted]);
+    }
+
     public function health()
     {
         return response()->json(array_merge(['success' => true], $this->aiService->health()));
