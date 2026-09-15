@@ -160,10 +160,10 @@ class MessageController extends Controller
         }
 
         if ($request->hasFile('image') && !Schema::hasColumn('messages', 'image_url')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Image messaging is not enabled on the server yet. Run the latest database migration.',
-            ], 503);
+            Schema::table('messages', function ($table) {
+                $table->text('image_url')->nullable();
+                $table->string('image_public_id')->nullable();
+            });
         }
 
         $user = Auth::user();

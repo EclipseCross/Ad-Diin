@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Trash2, Image as ImageIcon, Smile } from 'lucide-react';
+import { MessageCircle, Send, AlertCircle, Loader, Check, CheckCheck, Image as ImageIcon, Smile } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { apiBaseUrl } from '../api';
@@ -304,6 +304,7 @@ export default function MessagingPage() {
     setShowStickers(false);
   };
 
+  /* message deletion is intentionally unavailable in the support UI */
   const deleteMessage = async (messageId: number, mode: 'me' | 'everyone') => {
     if (!selectedConversation) return;
     if (!window.confirm(mode === 'everyone' ? 'Delete this message for everyone?' : 'Delete this message only for you?')) return;
@@ -318,6 +319,8 @@ export default function MessagingPage() {
       toast.error(error.response?.data?.message || 'Failed to delete message');
     }
   };
+
+  void deleteMessage;
 
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-100/50 px-4 py-10 md:px-8 md:py-14">
@@ -432,28 +435,6 @@ export default function MessagingPage() {
                             )}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void deleteMessage(msg.id, 'me')}
-                          aria-label="Delete message for me"
-                          title="Delete for me"
-                          className={`self-center rounded-lg p-2 text-slate-400 transition hover:bg-red-100 hover:text-red-600 ${
-                            msg.sender_type === 'user' ? 'order-first mr-2' : 'ml-2'
-                          }`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        {msg.sender_type === 'user' && (
-                          <button
-                            type="button"
-                            onClick={() => void deleteMessage(msg.id, 'everyone')}
-                            aria-label="Delete message for everyone"
-                            title="Delete for everyone"
-                            className="self-center rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50"
-                          >
-                            Everyone
-                          </button>
-                        )}
                       </div>
                     ))
                   )}

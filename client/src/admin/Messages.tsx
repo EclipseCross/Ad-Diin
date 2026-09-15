@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image as ImageIcon, Loader2, Search, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Search } from 'lucide-react';
 import { ThemeProps, API_URL, authHeaders } from './shared';
 
 interface MessagesProps extends ThemeProps {
@@ -13,7 +13,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadMessages = async (conversationId: number) => {
     try {
@@ -66,7 +65,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
   const handleDeleteConversation = async (conversation: any) => {
     const forEveryone = window.confirm('Delete this conversation for everyone?\n\nChoose Cancel to hide it only from your admin inbox.');
     if (!forEveryone && !window.confirm('Hide this conversation only for your admin account?')) return;
-    setDeletingId(conversation.id);
     try {
       const r = await fetch(`${API_URL}/api/v1/messages/${conversation.id}/${forEveryone ? 'delete-for-everyone' : 'delete-for-me'}`, {
         method: 'POST', headers: authHeaders(),
@@ -79,7 +77,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
     } catch (err: any) {
       window.alert(err.message || 'Could not delete conversation');
     } finally {
-      setDeletingId(null);
     }
   };
 
@@ -103,6 +100,9 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
     const query = search.trim().toLowerCase();
     return !query || `${conv.user?.name || ''} ${conv.user?.email || ''}`.toLowerCase().includes(query);
   });
+
+  void handleDeleteConversation;
+  void handleDeleteMessage;
 
   return (
     <div className={`${card} rounded-xl shadow-sm p-6 w-full max-w-6xl`}>
@@ -131,9 +131,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
                     <p className={`font-semibold text-sm ${text}`}>{conv.user?.name || 'User'}</p>
                     <p className={`truncate text-xs ${sub}`}>{conv.user?.email}</p>
                     <p className={`mt-1 truncate text-xs ${sub}`}>{conv.lastMessage?.message || 'No messages'}</p>
-                  </button>
-                  <button type="button" onClick={() => void handleDeleteConversation(conv)} disabled={deletingId === conv.id} title="Delete conversation" className={`mr-2 rounded-lg p-2 ${sub} hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50`}>
-                    {deletingId === conv.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </button>
                 </div>
               ))
@@ -167,9 +164,6 @@ export default function Messages({ card, text, sub, bdr, inputCls, conversations
                         <p className="text-sm">{msg.message}</p>
                         {msg.image_url && <a href={msg.image_url} target="_blank" rel="noreferrer" className="mt-2 block"><img src={msg.image_url} alt="Message attachment" className="max-h-64 max-w-full rounded-xl object-cover" /></a>}
                         <p className="text-xs opacity-50 mt-1">{new Date(msg.created_at).toLocaleTimeString()}</p>
-                        <button type="button" onClick={() => void handleDeleteMessage(msg.id)} title="Delete message" className="absolute -right-9 top-1/2 rounded p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </div>
                   ))
